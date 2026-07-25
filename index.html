@@ -3,8 +3,138 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>RPE Post-séance — U13 Limoges Football</title>
+<title>Suivi U13 — Limoges Football</title>
 <style>
+
+  :root{
+    --fond:#0f1115;
+    --panneau:#1a1d24;
+    --panneau-clair:#22262f;
+    --texte:#eef0f3;
+    --texte-att:#9aa0ad;
+    --ligne:#2c303a;
+    --bleu:#4a7dd6;
+    --vert:#3a9d5a;
+    --n1:#3a9d5a; --n2:#d4a82e; --n3:#d4711f; --n4:#c4392f; --n5:#4a4a52;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--fond);color:var(--texte);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;min-height:100vh;}
+  .wrap{max-width:600px;margin:0 auto;padding:16px 14px 60px;}
+
+  .header{text-align:center;margin-bottom:16px;}
+  .header .tag{display:inline-block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--texte-att);border:1px solid var(--ligne);border-radius:999px;padding:3px 10px;margin-bottom:8px;}
+  .header h1{font-size:22px;font-weight:700;margin:0 0 2px;}
+  .header .date{font-size:12px;color:var(--texte-att);text-transform:capitalize;}
+
+  /* BARRE */
+  .barre-progression{display:flex;align-items:center;gap:10px;background:var(--panneau);border:1px solid var(--ligne);border-radius:12px;padding:10px 14px;margin-bottom:14px;}
+  .barre-progression .prog-label{font-size:13px;color:var(--texte-att);flex:1;}
+  .barre-progression .prog-chiffre{font-size:15px;font-weight:700;}
+  .barre-track{flex:2;height:8px;border-radius:999px;background:var(--panneau-clair);overflow:hidden;}
+  .barre-fill{height:100%;border-radius:999px;background:var(--vert);transition:width .3s ease;}
+
+  /* MODE EDUCATEUR */
+  .mode-edu-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    background:rgba(74,125,214,.1);border:1px solid rgba(74,125,214,.3);
+    border-radius:12px;padding:10px 14px;margin-bottom:14px;
+  }
+  .mode-edu-bar span{font-size:13px;color:var(--bleu);}
+  .mode-edu-bar button{background:none;border:1px solid rgba(74,125,214,.4);color:var(--bleu);font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer;}
+
+  /* GRILLE JOUEURS */
+  .grille-joueurs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+  .joueur-card{
+    background:var(--panneau);border:1.5px solid var(--ligne);border-radius:14px;
+    padding:12px 8px;text-align:center;cursor:pointer;
+    transition:transform .08s ease;position:relative;
+  }
+  .joueur-card:active:not(.verrouille){transform:scale(0.95);}
+  .joueur-card .j-nom{font-size:13.5px;font-weight:700;line-height:1.2;}
+  .joueur-card .j-info{font-size:12px;margin-top:4px;height:18px;}
+  .joueur-card .check{position:absolute;top:6px;right:8px;font-size:11px;width:18px;height:18px;border-radius:50%;background:var(--vert);display:none;align-items:center;justify-content:center;color:#fff;font-weight:700;}
+
+  /* États */
+  .joueur-card.fait{border-color:var(--vert);cursor:default;}
+  .joueur-card.fait .check{display:flex;}
+  .joueur-card.verrouille{opacity:.5;cursor:not-allowed;}
+  .joueur-card.modifiable{border-color:var(--bleu);cursor:pointer;}
+  .joueur-card.actif{border-color:var(--bleu);background:rgba(74,125,214,.1);}
+
+  /* VUE NIVEAUX */
+  #vueNiveaux{display:none;}
+  .niveaux-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .btn-retour{background:var(--panneau-clair);border:1px solid var(--ligne);color:var(--texte);padding:9px 14px;border-radius:10px;font-size:13px;cursor:pointer;flex-shrink:0;}
+  .niveaux-nom{font-size:20px;font-weight:800;}
+
+  .niveaux-liste{display:flex;flex-direction:column;gap:10px;}
+  .niveau-btn{
+    display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+    border:2px solid var(--ligne);background:var(--panneau-clair);border-radius:14px;
+    padding:13px 14px;cursor:pointer;color:var(--texte);
+    transition:transform .08s ease;
+  }
+  .niveau-btn:active{transform:scale(0.98);}
+  .niveau-btn .pastille{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+  .niveau-btn .txt .titre{font-size:14.5px;font-weight:700;display:block;margin-bottom:2px;}
+  .niveau-btn .txt .sous{font-size:12px;color:var(--texte-att);line-height:1.3;}
+  .niveau-btn .num{font-size:12px;color:var(--texte-att);font-weight:700;width:20px;text-align:center;flex-shrink:0;}
+
+  .niveau-btn.n1 .pastille{background:rgba(58,157,90,.18);}
+  .niveau-btn.n2 .pastille{background:rgba(212,168,46,.18);}
+  .niveau-btn.n3 .pastille{background:rgba(212,113,31,.18);}
+  .niveau-btn.n4 .pastille{background:rgba(196,57,47,.18);}
+  .niveau-btn.n5 .pastille{background:rgba(255,255,255,.06);}
+
+  /* FLASH */
+  .flash{display:none;position:fixed;top:0;left:0;right:0;bottom:0;align-items:center;justify-content:center;flex-direction:column;background:rgba(15,17,21,.92);z-index:100;}
+  .flash.show{display:flex;}
+  .flash .flash-emoji{font-size:72px;margin-bottom:10px;}
+  .flash .flash-nom{font-size:24px;font-weight:800;}
+
+  /* DASHBOARD */
+  .toggle-zone{margin-top:24px;text-align:center;}
+  .toggle-btn{background:none;border:1px solid var(--ligne);color:var(--texte-att);font-size:13px;padding:9px 18px;border-radius:999px;cursor:pointer;}
+  .dashboard{display:none;margin-top:20px;}
+  .dashboard.show{display:block;}
+
+  .dash-tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .dash-tab{flex:1;background:var(--panneau);border:1px solid var(--ligne);color:var(--texte-att);padding:9px;border-radius:10px;font-size:13px;cursor:pointer;text-align:center;}
+  .dash-tab.active{border-color:var(--bleu);color:var(--texte);background:rgba(74,125,214,.12);}
+
+  .nav-jour{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;}
+  .nav-jour button{background:var(--panneau-clair);border:1px solid var(--ligne);color:var(--texte);width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:16px;}
+  .nav-jour .jour-actuel{flex:1;text-align:center;font-size:14px;font-weight:700;text-transform:capitalize;}
+
+  .dash-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
+  .dash-head h2{font-size:16px;margin:0;}
+  .dash-head .count{font-size:13px;color:var(--texte-att);}
+  .dash-loading{text-align:center;color:var(--texte-att);font-size:13px;padding:24px;}
+  .dash-empty{text-align:center;color:var(--texte-att);font-size:14px;padding:30px;border:1px dashed var(--ligne);border-radius:14px;}
+
+  .groupe{margin-bottom:14px;}
+  .groupe-titre{display:flex;align-items:center;gap:8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--texte-att);margin-bottom:8px;font-weight:700;}
+  .groupe-titre .dot{width:9px;height:9px;border-radius:50%;}
+  .joueur-ligne{display:flex;align-items:center;gap:10px;background:var(--panneau);border:1px solid var(--ligne);border-radius:12px;padding:10px 12px;margin-bottom:6px;}
+  .joueur-ligne .em{font-size:20px;}
+  .joueur-ligne .nom{flex:1;font-size:14.5px;font-weight:600;}
+  .joueur-ligne .heure{font-size:11.5px;color:var(--texte-att);}
+
+  /* Historique joueur */
+  .select-histo{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--ligne);background:var(--panneau-clair);color:var(--texte);font-size:14px;margin-bottom:14px;appearance:none;}
+  .histo-ligne{display:flex;align-items:center;gap:10px;background:var(--panneau);border:1px solid var(--ligne);border-radius:10px;padding:9px 12px;margin-bottom:6px;}
+  .histo-ligne .em{font-size:17px;}
+  .histo-ligne .d{flex:1;font-size:13px;color:var(--texte-att);text-transform:capitalize;}
+  .moyenne-card{background:var(--panneau-clair);border:1px solid var(--ligne);border-radius:14px;padding:14px;margin-bottom:14px;text-align:center;}
+  .moyenne-card .chiffre{font-size:28px;font-weight:700;}
+  .moyenne-card .label{font-size:12px;color:var(--texte-att);margin-top:2px;}
+
+  .dash-actions{display:flex;gap:10px;margin-top:12px;}
+  .dash-actions button{flex:1;background:var(--panneau);border:1px solid var(--ligne);color:var(--texte-att);padding:10px;border-radius:10px;font-size:13px;cursor:pointer;}
+  .footer-note{text-align:center;color:var(--texte-att);font-size:11.5px;margin-top:24px;line-height:1.5;}
+
+
   :root{
     --fond:#0f1115;
     --panneau:#1a1d24;
@@ -164,39 +294,427 @@
   .dash-actions{display:flex;gap:10px;margin-top:12px;}
   .dash-actions button{flex:1;background:var(--panneau);border:1px solid var(--ligne);color:var(--texte-att);padding:10px;border-radius:10px;font-size:13px;cursor:pointer;}
   .footer-note{text-align:center;color:var(--texte-att);font-size:11.5px;margin-top:24px;line-height:1.5;}
+
+
+  /* ===== ONGLETS PRINCIPAUX ===== */
+  .app-tabs{
+    display:flex;gap:8px;max-width:600px;margin:0 auto;padding:14px 14px 0;
+    position:sticky;top:0;background:var(--fond);z-index:50;
+  }
+  .app-tab{
+    flex:1;padding:12px 10px;border-radius:12px;border:1.5px solid var(--ligne);
+    background:var(--panneau);color:var(--texte-att);font-size:14px;font-weight:700;
+    cursor:pointer;text-align:center;transition:all .12s ease;
+  }
+  .app-tab.active{border-color:var(--bleu);color:var(--texte);background:rgba(74,125,214,.14);}
+  .app-panel{display:none;}
+  .app-panel.active{display:block;}
+
 </style>
 </head>
 <body>
+
+<div class="app-tabs">
+  <button class="app-tab active" id="tabBtnMeteo" data-cible="panelMeteo">☀️ Météo du jour</button>
+  <button class="app-tab" id="tabBtnRpe" data-cible="panelRpe">💪 RPE Post-séance</button>
+</div>
+
+<div class="app-panel active" id="panelMeteo">
+
+<div class="wrap">
+
+  <div class="header">
+    <span class="tag">Avant séance · U13 Limoges Football</span>
+    <h1>Météo du jour</h1>
+    <div class="date" id="met-dateAffichee"></div>
+  </div>
+
+  <div class="barre-progression">
+    <span class="prog-label">Joueurs renseignés</span>
+    <div class="barre-track"><div class="barre-fill" id="met-barreFill" style="width:0%"></div></div>
+    <span class="prog-chiffre" id="met-progChiffre">0 / 22</span>
+  </div>
+
+  <!-- MODE EDUCATEUR (masqué par défaut) -->
+  <div class="mode-edu-bar" id="met-modeEduBar" style="display:none;">
+    <span>🔓 Mode éducateur activé</span>
+    <button id="met-btnQuitterEdu">Verrouiller</button>
+  </div>
+
+  <!-- VUE GRILLE -->
+  <div id="met-vueGrille">
+    <div class="grille-joueurs" id="met-grilleJoueurs"></div>
+  </div>
+
+  <!-- VUE NIVEAUX -->
+  <div id="met-vueNiveaux">
+    <div class="niveaux-header">
+      <button class="btn-retour" id="met-btnRetour">← Retour</button>
+      <div class="niveaux-nom" id="met-niveauxNom"></div>
+    </div>
+    <div class="niveaux-liste">
+      <button class="niveau-btn n1" data-n="1">
+        <span class="pastille">🟩</span>
+        <span class="txt"><span class="titre">Pleine forme !</span><span class="sous">Prêt à courir partout</span></span>
+        <span class="num">1</span>
+      </button>
+      <button class="niveau-btn n2" data-n="2">
+        <span class="pastille">🟨</span>
+        <span class="txt"><span class="titre">Un peu lourd</span><span class="sous">Petite journée d'école, mais ça va</span></span>
+        <span class="num">2</span>
+      </button>
+      <button class="niveau-btn n3" data-n="3">
+        <span class="pastille">🟧</span>
+        <span class="txt"><span class="titre">Fatigué</span><span class="sous">Gros contrôle à l'école, mauvaise nuit</span></span>
+        <span class="num">3</span>
+      </button>
+      <button class="niveau-btn n4" data-n="4">
+        <span class="pastille">🟥</span>
+        <span class="txt"><span class="titre">Très fatigué</span><span class="sous">Courbatures, pas d'énergie</span></span>
+        <span class="num">4</span>
+      </button>
+      <button class="niveau-btn n5" data-n="5">
+        <span class="pastille">⬛</span>
+        <span class="txt"><span class="titre">Épuisé / Douleur</span><span class="sous">Bobo quelque part, impossible de forcer</span></span>
+        <span class="num">5</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- FLASH -->
+  <div class="flash" id="met-flash">
+    <div class="flash-emoji" id="met-flashEmoji"></div>
+    <div class="flash-nom" id="met-flashNom"></div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="toggle-zone">
+    <button class="toggle-btn" id="met-btnToggleDash">Voir le tableau de bord coach</button>
+  </div>
+  <div class="dashboard" id="met-dashboard">
+    <div class="dash-tabs">
+      <button class="dash-tab active" data-onglet="jour">Vue du jour</button>
+      <button class="dash-tab" data-onglet="historique">Historique joueur</button>
+    </div>
+    <div id="met-vueJour">
+      <div class="nav-jour">
+        <button id="met-jourPrecedent">‹</button>
+        <div class="jour-actuel" id="met-jourActuelTxt">aujourd'hui</div>
+        <button id="met-jourSuivant">›</button>
+      </div>
+      <div class="dash-head"><h2>Check-ins</h2><span class="count" id="met-dashCount">—</span></div>
+      <div id="met-dashContenu"><div class="dash-loading">Chargement…</div></div>
+    </div>
+    <div id="met-vueHistorique" style="display:none;">
+      <select class="select-histo" id="met-selectHistoJoueur">
+        <option value="">— Choisir un joueur —</option>
+      </select>
+      <div id="met-histoContenu"></div>
+    </div>
+    <div class="dash-actions">
+      <button id="met-btnModeEdu">Mode éducateur</button>
+      <button id="met-btnRafraichir">Actualiser</button>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Les réponses sont confidentielles — chaque joueur ne peut répondre qu'une fois.<br>
+    Modification possible par l'éducateur uniquement.
+  </div>
+
+</div>
+<script>
+(function(){
+
+  var URL_SCRIPT = "https://script.google.com/macros/s/AKfycbw9ychbh5oSoc-k22FnT7mmCf04684C2hJmllRDATvNQR37I_Udwpn3mHTAVvA3af9cRQ/exec";
+  var CODE_PIN = "0501";
+  var SESSION_COACH = "meteo_coach_session";
+  var SESSION_EDU = "meteo_edu_mode";
+
+  var EFFECTIF = ["Abdoul Karim","Adam","Bakoutoubo","Bilel","Emir","Ethan","Gabin","Hadi","Issam","Jalil","Kalifa","Keys","Loan","Mathis","Melih","Mickaël","Nourou","Pablo","Sacha","Sarah","Sebastien","Yanis"];
+
+  var NIVEAUX = {
+    1:{emoji:"🟩", titre:"Pleine forme !", couleur:"var(--n1)"},
+    2:{emoji:"🟨", titre:"Un peu lourd", couleur:"var(--n2)"},
+    3:{emoji:"🟧", titre:"Fatigué", couleur:"var(--n3)"},
+    4:{emoji:"🟥", titre:"Très fatigué", couleur:"var(--n4)"},
+    5:{emoji:"⬛", titre:"Épuisé / Douleur", couleur:"var(--n5)"}
+  };
+
+  var moisFr = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  var joursFr = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+  function formatDate(d){ return joursFr[d.getDay()]+" "+d.getDate()+" "+moisFr[d.getMonth()]; }
+  function clefISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+
+  document.getElementById("met-dateAffichee").textContent = formatDate(new Date());
+
+  // ---------- ÉTAT ----------
+  var STORAGE_SAISIES = "meteo_saisies_" + (function(){
+    var d = new Date();
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  })();
+  var saisies = {};
+  try{ var raw = localStorage.getItem(STORAGE_SAISIES); if(raw) saisies = JSON.parse(raw); }catch(e){}
+  var joueurActif = null;
+  var modeEdu = false;
+
+  function sauverSaisies(){ try{ localStorage.setItem(STORAGE_SAISIES, JSON.stringify(saisies)); }catch(e){} }
+
+  // ---------- MODE ÉDUCATEUR ----------
+  function activerModeEdu(){
+    modeEdu = true;
+    sessionStorage.setItem(SESSION_EDU, "1");
+    document.getElementById("met-modeEduBar").style.display = "flex";
+    construireGrille();
+  }
+  function desactiverModeEdu(){
+    modeEdu = false;
+    sessionStorage.removeItem(SESSION_EDU);
+    document.getElementById("met-modeEduBar").style.display = "none";
+    construireGrille();
+  }
+  document.getElementById("met-btnQuitterEdu").addEventListener("click", desactiverModeEdu);
+  document.getElementById("met-btnModeEdu").addEventListener("click", function(){
+    var ok = sessionStorage.getItem(SESSION_COACH) === "1";
+    if(!ok){
+      var s = prompt("Code éducateur (4 chiffres) :");
+      if(!s || s.trim() !== CODE_PIN){ alert("Code incorrect."); return; }
+      sessionStorage.setItem(SESSION_COACH,"1");
+    }
+    activerModeEdu();
+  });
+
+  // Restaurer mode éducateur si session active
+  if(sessionStorage.getItem(SESSION_EDU) === "1"){
+    modeEdu = true;
+    document.getElementById("met-modeEduBar").style.display = "flex";
+  }
+
+  // ---------- GRILLE JOUEURS ----------
+  function construireGrille(){
+    var grille = document.getElementById("met-grilleJoueurs");
+    grille.innerHTML = "";
+    var nb = Object.keys(saisies).length;
+    var total = EFFECTIF.length;
+    document.getElementById("met-barreFill").style.width = Math.round(nb/total*100)+"%";
+    document.getElementById("met-progChiffre").textContent = nb+" / "+total;
+
+    EFFECTIF.forEach(function(nom){
+      var card = document.createElement("div");
+      card.className = "joueur-card";
+      var fait = saisies.hasOwnProperty(nom);
+
+      if(fait){
+        card.classList.add("fait");
+        if(modeEdu){
+          // En mode éducateur : affiche l'émoji + possibilité de modifier
+          card.classList.add("modifiable");
+          var info = NIVEAUX[saisies[nom]];
+          card.innerHTML = '<div class="j-nom">'+nom+'</div><div class="j-info">'+info.emoji+'</div><div class="check">✓</div>';
+        } else {
+          // Mode normal : prénom vert + check, pas de réponse visible, verrouillé
+          card.classList.add("verrouille");
+          card.innerHTML = '<div class="j-nom">'+nom+'</div><div class="j-info"></div><div class="check">✓</div>';
+        }
+      } else {
+        card.innerHTML = '<div class="j-nom">'+nom+'</div><div class="j-info"></div>';
+      }
+
+      card.addEventListener("click", function(){
+        if(fait && !modeEdu) return; // verrouillé
+        ouvrirNiveaux(nom);
+      });
+      grille.appendChild(card);
+    });
+  }
+
+  // ---------- VUE NIVEAUX ----------
+  function ouvrirNiveaux(nom){
+    joueurActif = nom;
+    document.getElementById("met-niveauxNom").textContent = nom;
+    document.getElementById("met-vueGrille").style.display = "none";
+    document.getElementById("met-vueNiveaux").style.display = "block";
+  }
+
+  document.getElementById("met-btnRetour").addEventListener("click", function(){
+    joueurActif = null;
+    document.getElementById("met-vueNiveaux").style.display = "none";
+    document.getElementById("met-vueGrille").style.display = "block";
+  });
+
+  document.querySelectorAll(".niveau-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      if(!joueurActif) return;
+      var n = parseInt(btn.getAttribute("data-n"),10);
+      var nom = joueurActif;
+      saisies[nom] = n;
+      sauverSaisies();
+
+      // Flash
+      var info = NIVEAUX[n];
+      document.getElementById("met-flashEmoji").textContent = info.emoji;
+      document.getElementById("met-flashNom").textContent = nom;
+      var flash = document.getElementById("met-flash");
+      flash.classList.add("show");
+
+      // Envoi immédiat
+      fetch(URL_SCRIPT, {
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({nom:nom, niveau:n})
+      }).catch(function(){});
+
+      setTimeout(function(){
+        flash.classList.remove("show");
+        joueurActif = null;
+        document.getElementById("met-vueNiveaux").style.display = "none";
+        document.getElementById("met-vueGrille").style.display = "block";
+        construireGrille();
+      }, 600);
+    });
+  });
+
+  construireGrille();
+
+  // ---------- DASHBOARD ----------
+  var dashboard = document.getElementById("met-dashboard");
+  var btnToggleDash = document.getElementById("met-btnToggleDash");
+  var toutesLesDonnees = null;
+  var jourAffiche = new Date();
+  var ongletDash = "jour";
+
+  btnToggleDash.addEventListener("click", function(){
+    var dejaOuvert = dashboard.classList.contains("show");
+    if(dejaOuvert){ dashboard.classList.remove("show"); btnToggleDash.textContent="Voir le tableau de bord coach"; return; }
+    var ok = sessionStorage.getItem(SESSION_COACH) === "1";
+    if(!ok){
+      var s = prompt("Code coach (4 chiffres) :");
+      if(!s || s.trim() !== CODE_PIN){ alert("Code incorrect."); return; }
+      sessionStorage.setItem(SESSION_COACH,"1");
+    }
+    dashboard.classList.add("show");
+    btnToggleDash.textContent = "Masquer le tableau de bord";
+    chargerDonnees();
+  });
+
+  document.querySelectorAll(".dash-tab").forEach(function(tab){
+    tab.addEventListener("click", function(){
+      document.querySelectorAll(".dash-tab").forEach(function(t){ t.classList.remove("active"); });
+      tab.classList.add("active");
+      ongletDash = tab.getAttribute("data-onglet");
+      document.getElementById("met-vueJour").style.display = ongletDash==="jour" ? "block" : "none";
+      document.getElementById("met-vueHistorique").style.display = ongletDash==="historique" ? "block" : "none";
+    });
+  });
+
+  document.getElementById("met-btnRafraichir").addEventListener("click", chargerDonnees);
+  document.getElementById("met-jourPrecedent").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()-1); afficherJour(); });
+  document.getElementById("met-jourSuivant").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()+1); afficherJour(); });
+
+  // Select historique
+  var selHisto = document.getElementById("met-selectHistoJoueur");
+  EFFECTIF.forEach(function(nom){ var o=document.createElement("option");o.value=nom;o.textContent=nom;selHisto.appendChild(o); });
+  selHisto.addEventListener("change", function(){ afficherHistorique(this.value); });
+
+  function chargerDonnees(){
+    document.getElementById("met-dashContenu").innerHTML = '<div class="dash-loading">Chargement…</div>';
+    fetch(URL_SCRIPT)
+      .then(function(r){ return r.json(); })
+      .then(function(d){ toutesLesDonnees=d; afficherJour(); })
+      .catch(function(){ document.getElementById("met-dashContenu").innerHTML='<div class="dash-empty">Impossible de charger.</div>'; });
+  }
+
+  function afficherJour(){
+    if(!toutesLesDonnees) return;
+    var estAujourdhui = clefISO(jourAffiche)===clefISO(new Date());
+    document.getElementById("met-jourActuelTxt").textContent = estAujourdhui ? "aujourd'hui" : formatDate(new Date(jourAffiche));
+    var clef = clefISO(jourAffiche);
+    var data = toutesLesDonnees.filter(function(r){
+      var d = r.date;
+      if(d instanceof Date) d = clefISO(d);
+      if(typeof d === "string" && d.length > 10) d = d.substring(0,10);
+      return d === clef;
+    });
+    document.getElementById("met-dashCount").textContent = data.length+(data.length===1?" réponse":" réponses");
+
+    var cont = document.getElementById("met-dashContenu");
+    if(data.length===0){ cont.innerHTML='<div class="dash-empty">Aucun check-in ce jour-là.</div>'; return; }
+
+    var parNiveau = {1:[],2:[],3:[],4:[],5:[]};
+    data.forEach(function(r){ if(parNiveau[r.niveau]) parNiveau[r.niveau].push(r); });
+
+    var dotCouleurs = {1:"var(--n1)",2:"var(--n2)",3:"var(--n3)",4:"var(--n4)",5:"var(--n5)"};
+    var html = "";
+    [1,2,3,4,5].forEach(function(n){
+      if(parNiveau[n].length===0) return;
+      var info = NIVEAUX[n];
+      html += '<div class="groupe"><div class="groupe-titre"><span class="dot" style="background:'+dotCouleurs[n]+'"></span>'+info.titre+' ('+parNiveau[n].length+')</div>';
+      parNiveau[n].forEach(function(r){
+        html += '<div class="joueur-ligne"><span class="em">'+info.emoji+'</span><span class="nom">'+escapeHTML(r.nom)+'</span><span class="heure">'+escapeHTML(r.heure)+'</span></div>';
+      });
+      html += '</div>';
+    });
+    cont.innerHTML = html;
+  }
+
+  function afficherHistorique(nom){
+    var cont = document.getElementById("met-histoContenu");
+    if(!nom){ cont.innerHTML=""; return; }
+    if(!toutesLesDonnees){ cont.innerHTML='<div class="dash-loading">Chargement…</div>'; return; }
+    var lignes = toutesLesDonnees.filter(function(r){ return r.nom===nom; });
+    lignes.sort(function(a,b){ return a.date<b.date?1:-1; });
+    if(lignes.length===0){ cont.innerHTML='<div class="dash-empty">Aucune donnée pour ce joueur.</div>'; return; }
+    var somme=0;
+    lignes.forEach(function(r){ somme+=parseInt(r.niveau,10); });
+    var moy=(somme/lignes.length).toFixed(1);
+    var html='<div class="moyenne-card"><div class="chiffre">'+moy+' / 5</div><div class="label">Niveau moyen de fatigue sur '+lignes.length+' check-ins</div></div>';
+    lignes.forEach(function(r){
+      var info = NIVEAUX[r.niveau];
+      var d = new Date(r.date+"T12:00:00");
+      html += '<div class="histo-ligne"><span class="em">'+info.emoji+'</span><span class="d">'+formatDate(d)+'</span></div>';
+    });
+    cont.innerHTML = html;
+  }
+
+  function escapeHTML(s){ var d=document.createElement("div");d.textContent=s;return d.innerHTML; }
+
+})();
+</script>
+
+</div>
+
+<div class="app-panel" id="panelRpe">
+
 <div class="wrap">
 
   <div class="header">
     <span class="tag">Fin de séance · U13 Limoges Football</span>
     <h1>RPE Post-séance</h1>
-    <div class="date" id="dateAffichee"></div>
+    <div class="date" id="rpe-dateAffichee"></div>
   </div>
 
   <!-- BARRE DE PROGRESSION -->
   <div class="barre-progression">
     <span class="prog-label">Joueurs renseignés</span>
-    <div class="barre-track"><div class="barre-fill" id="barreFill" style="width:0%"></div></div>
-    <span class="prog-chiffre" id="progChiffre">0 / 22</span>
+    <div class="barre-track"><div class="barre-fill" id="rpe-barreFill" style="width:0%"></div></div>
+    <span class="prog-chiffre" id="rpe-progChiffre">0 / 22</span>
   </div>
 
   <!-- VUE GRILLE JOUEURS -->
-  <div id="vueGrille">
-    <div class="grille-joueurs" id="grilleJoueurs"></div>
-    <button class="btn-envoyer" id="btnEnvoyer" disabled>Envoyer les résultats</button>
-    <div class="erreur" id="zoneErreur"></div>
+  <div id="rpe-vueGrille">
+    <div class="grille-joueurs" id="rpe-grilleJoueurs"></div>
+    <button class="btn-envoyer" id="rpe-btnEnvoyer" disabled>Envoyer les résultats</button>
+    <div class="erreur" id="rpe-zoneErreur"></div>
   </div>
 
   <!-- VUE SELECTION RPE -->
-  <div id="vueRPE">
+  <div id="rpe-vueRPE">
     <div class="rpe-header">
-      <button class="btn-retour" id="btnRetour">← Retour</button>
-      <div class="rpe-joueur-nom" id="rpeJoueurNom"></div>
+      <button class="btn-retour" id="rpe-btnRetour">← Retour</button>
+      <div class="rpe-joueur-nom" id="rpe-rpeJoueurNom"></div>
     </div>
     <div class="rpe-instruction">Quelle a été l'intensité de la séance ?</div>
-    <div class="rpe-grille-grande" id="rpeGrille">
+    <div class="rpe-grille-grande" id="rpe-rpeGrille">
       <div class="rpe-item">
         <button class="rpe-grand-btn" data-n="1">1</button>
         <span class="rpe-libelle">Trop facile</span>
@@ -242,37 +760,37 @@
   </div>
 
   <!-- FLASH CONFIRMATION -->
-  <div class="flash" id="flash">
-    <div class="flash-nom" id="flashNom"></div>
-    <div class="flash-note" id="flashNote"></div>
+  <div class="flash" id="rpe-flash">
+    <div class="flash-nom" id="rpe-flashNom"></div>
+    <div class="flash-note" id="rpe-flashNote"></div>
     <div class="flash-label">noté ✓</div>
   </div>
 
   <!-- VUE ENVOI CONFIRME -->
-  <div id="vueEnvoi">
+  <div id="rpe-vueEnvoi">
     <span class="grand-emoji">✅</span>
     <h2>Séance enregistrée !</h2>
-    <p id="envoiDetail"></p>
-    <button class="btn-reset" id="btnReset">Nouvelle séance</button>
+    <p id="rpe-envoiDetail"></p>
+    <button class="btn-reset" id="rpe-btnReset">Nouvelle séance</button>
   </div>
 
   <!-- DASHBOARD -->
   <div class="toggle-zone">
-    <button class="toggle-btn" id="btnToggleDash">Voir le tableau de bord coach</button>
+    <button class="toggle-btn" id="rpe-btnToggleDash">Voir le tableau de bord coach</button>
   </div>
-  <div class="dashboard" id="dashboard">
+  <div class="dashboard" id="rpe-dashboard">
     <div class="nav-jour">
-      <button id="jourPrecedent">‹</button>
-      <div class="jour-actuel" id="jourActuelTxt">aujourd'hui</div>
-      <button id="jourSuivant">›</button>
+      <button id="rpe-jourPrecedent">‹</button>
+      <div class="jour-actuel" id="rpe-jourActuelTxt">aujourd'hui</div>
+      <button id="rpe-jourSuivant">›</button>
     </div>
     <div class="dash-head">
       <h2>RPE post-séance</h2>
-      <span class="count" id="dashCount">—</span>
+      <span class="count" id="rpe-dashCount">—</span>
     </div>
-    <div id="dashContenu"><div class="dash-loading">Chargement…</div></div>
+    <div id="rpe-dashContenu"><div class="dash-loading">Chargement…</div></div>
     <div class="dash-actions">
-      <button id="btnRafraichir">Actualiser</button>
+      <button id="rpe-btnRafraichir">Actualiser</button>
     </div>
   </div>
 
@@ -297,14 +815,14 @@
   function formatDate(d){ return joursFr[d.getDay()]+" "+d.getDate()+" "+moisFr[d.getMonth()]; }
   function clefISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 
-  document.getElementById("dateAffichee").textContent = formatDate(new Date());
+  document.getElementById("rpe-dateAffichee").textContent = formatDate(new Date());
 
   // ---------- ÉTAT ----------
   var saisies = {}; // {nom: rpe}
   var joueurActif = null;
 
   // ---------- GRILLE JOUEURS ----------
-  var grilleEl = document.getElementById("grilleJoueurs");
+  var grilleEl = document.getElementById("rpe-grilleJoueurs");
 
   function construireGrille(){
     grilleEl.innerHTML = "";
@@ -327,9 +845,9 @@
   function mettreAJourBarre(){
     var n = Object.keys(saisies).length;
     var total = EFFECTIF.length;
-    document.getElementById("barreFill").style.width = Math.round(n/total*100)+"%";
-    document.getElementById("progChiffre").textContent = n+" / "+total;
-    var btnEnv = document.getElementById("btnEnvoyer");
+    document.getElementById("rpe-barreFill").style.width = Math.round(n/total*100)+"%";
+    document.getElementById("rpe-progChiffre").textContent = n+" / "+total;
+    var btnEnv = document.getElementById("rpe-btnEnvoyer");
     btnEnv.classList.toggle("visible", n > 0);
     btnEnv.disabled = false;
     btnEnv.textContent = n === total ? "Envoyer tout ("+n+" joueurs)" : "Envoyer les "+n+" réponses";
@@ -338,15 +856,15 @@
   // ---------- VUE RPE ----------
   function ouvrirRPE(nom){
     joueurActif = nom;
-    document.getElementById("rpeJoueurNom").textContent = nom;
-    document.getElementById("vueGrille").style.display = "none";
-    document.getElementById("vueRPE").style.display = "block";
+    document.getElementById("rpe-rpeJoueurNom").textContent = nom;
+    document.getElementById("rpe-vueGrille").style.display = "none";
+    document.getElementById("rpe-vueRPE").style.display = "block";
   }
 
-  document.getElementById("btnRetour").addEventListener("click", function(){
+  document.getElementById("rpe-btnRetour").addEventListener("click", function(){
     joueurActif = null;
-    document.getElementById("vueRPE").style.display = "none";
-    document.getElementById("vueGrille").style.display = "block";
+    document.getElementById("rpe-vueRPE").style.display = "none";
+    document.getElementById("rpe-vueGrille").style.display = "block";
   });
 
   document.querySelectorAll(".rpe-grand-btn").forEach(function(btn){
@@ -356,16 +874,16 @@
       saisies[joueurActif] = n;
 
       // Flash rapide
-      var flash = document.getElementById("flash");
-      document.getElementById("flashNom").textContent = joueurActif;
-      document.getElementById("flashNote").textContent = n;
-      document.getElementById("flashNote").style.color = COULEURS[n];
+      var flash = document.getElementById("rpe-flash");
+      document.getElementById("rpe-flashNom").textContent = joueurActif;
+      document.getElementById("rpe-flashNote").textContent = n;
+      document.getElementById("rpe-flashNote").style.color = COULEURS[n];
       flash.classList.add("show");
       setTimeout(function(){
         flash.classList.remove("show");
         joueurActif = null;
-        document.getElementById("vueRPE").style.display = "none";
-        document.getElementById("vueGrille").style.display = "block";
+        document.getElementById("rpe-vueRPE").style.display = "none";
+        document.getElementById("rpe-vueGrille").style.display = "block";
         construireGrille();
       }, 600);
     });
@@ -374,13 +892,13 @@
   construireGrille();
 
   // ---------- ENVOI GROUPÉ ----------
-  document.getElementById("btnEnvoyer").addEventListener("click", function(){
+  document.getElementById("rpe-btnEnvoyer").addEventListener("click", function(){
     var noms = Object.keys(saisies);
     if(noms.length === 0) return;
-    var btn = document.getElementById("btnEnvoyer");
+    var btn = document.getElementById("rpe-btnEnvoyer");
     btn.disabled = true;
     btn.textContent = "Envoi en cours…";
-    document.getElementById("zoneErreur").style.display = "none";
+    document.getElementById("rpe-zoneErreur").style.display = "none";
 
     // Envoyer chaque saisie séquentiellement
     var promesses = noms.map(function(nom){
@@ -394,29 +912,29 @@
     Promise.all(promesses)
       .then(function(){
         var detail = noms.length+" joueur"+(noms.length>1?"s":"")+" enregistré"+(noms.length>1?"s":"")+".";
-        document.getElementById("envoiDetail").textContent = detail;
-        document.getElementById("vueGrille").style.display = "none";
-        document.getElementById("vueEnvoi").style.display = "block";
+        document.getElementById("rpe-envoiDetail").textContent = detail;
+        document.getElementById("rpe-vueGrille").style.display = "none";
+        document.getElementById("rpe-vueEnvoi").style.display = "block";
       })
       .catch(function(){
-        document.getElementById("zoneErreur").style.display = "block";
-        document.getElementById("zoneErreur").textContent = "Erreur lors de l'envoi. Vérifiez la connexion et réessayez.";
+        document.getElementById("rpe-zoneErreur").style.display = "block";
+        document.getElementById("rpe-zoneErreur").textContent = "Erreur lors de l'envoi. Vérifiez la connexion et réessayez.";
         btn.disabled = false;
         btn.textContent = "Réessayer";
       });
   });
 
-  document.getElementById("btnReset").addEventListener("click", function(){
+  document.getElementById("rpe-btnReset").addEventListener("click", function(){
     saisies = {};
     joueurActif = null;
-    document.getElementById("vueEnvoi").style.display = "none";
-    document.getElementById("vueGrille").style.display = "block";
+    document.getElementById("rpe-vueEnvoi").style.display = "none";
+    document.getElementById("rpe-vueGrille").style.display = "block";
     construireGrille();
   });
 
   // ---------- DASHBOARD ----------
-  var dashboard = document.getElementById("dashboard");
-  var btnToggleDash = document.getElementById("btnToggleDash");
+  var dashboard = document.getElementById("rpe-dashboard");
+  var btnToggleDash = document.getElementById("rpe-btnToggleDash");
   var toutesLesDonnees = null;
   var jourAffiche = new Date();
 
@@ -433,26 +951,26 @@
     chargerDonnees();
   });
 
-  document.getElementById("btnRafraichir").addEventListener("click", chargerDonnees);
-  document.getElementById("jourPrecedent").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()-1); afficherJour(); });
-  document.getElementById("jourSuivant").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()+1); afficherJour(); });
+  document.getElementById("rpe-btnRafraichir").addEventListener("click", chargerDonnees);
+  document.getElementById("rpe-jourPrecedent").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()-1); afficherJour(); });
+  document.getElementById("rpe-jourSuivant").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()+1); afficherJour(); });
 
   function chargerDonnees(){
-    document.getElementById("dashContenu").innerHTML = '<div class="dash-loading">Chargement…</div>';
+    document.getElementById("rpe-dashContenu").innerHTML = '<div class="dash-loading">Chargement…</div>';
     fetch(URL_SCRIPT+"?type=rpe_post")
       .then(function(r){ return r.json(); })
       .then(function(d){ toutesLesDonnees=d; afficherJour(); })
-      .catch(function(){ document.getElementById("dashContenu").innerHTML='<div class="dash-empty">Impossible de charger.</div>'; });
+      .catch(function(){ document.getElementById("rpe-dashContenu").innerHTML='<div class="dash-empty">Impossible de charger.</div>'; });
   }
 
   function afficherJour(){
     if(!toutesLesDonnees) return;
     var estAujourdhui = clefISO(jourAffiche)===clefISO(new Date());
-    document.getElementById("jourActuelTxt").textContent = estAujourdhui ? "aujourd'hui" : formatDate(new Date(jourAffiche));
+    document.getElementById("rpe-jourActuelTxt").textContent = estAujourdhui ? "aujourd'hui" : formatDate(new Date(jourAffiche));
     var clef = clefISO(jourAffiche);
     var data = toutesLesDonnees.filter(function(r){ return r.date===clef; });
-    document.getElementById("dashCount").textContent = data.length+(data.length===1?" réponse":" réponses");
-    var cont = document.getElementById("dashContenu");
+    document.getElementById("rpe-dashCount").textContent = data.length+(data.length===1?" réponse":" réponses");
+    var cont = document.getElementById("rpe-dashContenu");
     if(data.length===0){ cont.innerHTML='<div class="dash-empty">Aucune note ce jour-là.</div>'; return; }
 
     var somme = 0;
@@ -478,5 +996,22 @@
 
 })();
 </script>
+
+</div>
+
+<script>
+(function(){
+  var boutons = document.querySelectorAll(".app-tab");
+  boutons.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      boutons.forEach(function(b){ b.classList.remove("active"); });
+      document.querySelectorAll(".app-panel").forEach(function(p){ p.classList.remove("active"); });
+      btn.classList.add("active");
+      document.getElementById(btn.getAttribute("data-cible")).classList.add("active");
+    });
+  });
+})();
+</script>
+
 </body>
 </html>
