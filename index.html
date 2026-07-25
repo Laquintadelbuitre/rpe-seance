@@ -63,7 +63,7 @@
   .joueur-card.actif{border-color:var(--bleu);background:rgba(74,125,214,.1);}
 
   /* VUE NIVEAUX */
-  #vueNiveaux{display:none;}
+  #met-vueNiveaux{display:none;}
   .niveaux-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
   .btn-retour{background:var(--panneau-clair);border:1px solid var(--ligne);color:var(--texte);padding:9px 14px;border-radius:10px;font-size:13px;cursor:pointer;flex-shrink:0;}
   .niveaux-nom{font-size:20px;font-weight:800;}
@@ -169,7 +169,7 @@
   .barre-fill{height:100%;border-radius:999px;background:var(--vert);transition:width .3s ease;}
 
   /* ===== VUE GRILLE JOUEURS ===== */
-  #vueGrille{}
+  #rpe-vueGrille{}
   .grille-joueurs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
   .joueur-card{
     background:var(--panneau);border:1.5px solid var(--ligne);border-radius:14px;
@@ -200,7 +200,7 @@
   .btn-envoyer:disabled{background:#3a3e48;color:#7a7e88;cursor:not-allowed;}
 
   /* ===== VUE SELECTION RPE ===== */
-  #vueRPE{display:none;}
+  #rpe-vueRPE{display:none;}
   .rpe-header{
     display:flex;align-items:center;gap:12px;margin-bottom:18px;
   }
@@ -260,11 +260,11 @@
   .flash .flash-label{font-size:14px;color:var(--texte-att);margin-top:8px;}
 
   /* ECRAN ENVOI */
-  #vueEnvoi{display:none;text-align:center;padding:30px 10px;}
-  #vueEnvoi .grand-emoji{font-size:54px;margin-bottom:12px;display:block;}
-  #vueEnvoi h2{font-size:20px;margin:0 0 8px;}
-  #vueEnvoi p{color:var(--texte-att);font-size:14px;margin:0 0 22px;}
-  #vueEnvoi .btn-reset{background:none;border:1px solid var(--ligne);color:var(--texte);padding:11px 20px;border-radius:12px;font-size:14px;cursor:pointer;}
+  #rpe-vueEnvoi{display:none;text-align:center;padding:30px 10px;}
+  #rpe-vueEnvoi .grand-emoji{font-size:54px;margin-bottom:12px;display:block;}
+  #rpe-vueEnvoi h2{font-size:20px;margin:0 0 8px;}
+  #rpe-vueEnvoi p{color:var(--texte-att);font-size:14px;margin:0 0 22px;}
+  #rpe-vueEnvoi .btn-reset{background:none;border:1px solid var(--ligne);color:var(--texte);padding:11px 20px;border-radius:12px;font-size:14px;cursor:pointer;}
 
   .erreur{
     display:none;background:rgba(196,57,47,.12);border:1px solid rgba(196,57,47,.4);
