@@ -892,36 +892,59 @@
   construireGrille();
 
   // ---------- ENVOI GROUPÉ ----------
+  function envoyerUn(nom){
+    return fetch(URL_SCRIPT, {
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({type:"rpe_post", nom:nom, rpe:saisies[nom]})
+    }).then(function(r){ return r.json(); });
+  }
+
+  function pause(ms){ return new Promise(function(resolve){ setTimeout(resolve, ms); }); }
+
   document.getElementById("rpe-btnEnvoyer").addEventListener("click", function(){
     var noms = Object.keys(saisies);
     if(noms.length === 0) return;
     var btn = document.getElementById("rpe-btnEnvoyer");
     btn.disabled = true;
-    btn.textContent = "Envoi en cours…";
     document.getElementById("rpe-zoneErreur").style.display = "none";
 
-    // Envoyer chaque saisie séquentiellement
-    var promesses = noms.map(function(nom){
-      return fetch(URL_SCRIPT, {
-        method:"POST",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({type:"rpe_post", nom:nom, rpe:saisies[nom]})
-      }).then(function(r){ return r.json(); });
-    });
+    // Envoi réellement séquentiel : un joueur à la fois, on attend la réponse
+    // avant de passer au suivant (Google Apps Script gère mal les écritures
+    // simultanées, d'où les échecs silencieux en cas d'envoi groupé en parallèle).
+    var reussis = [];
+    var echecs = [];
+    var i = 0;
 
-    Promise.all(promesses)
-      .then(function(){
-        var detail = noms.length+" joueur"+(noms.length>1?"s":"")+" enregistré"+(noms.length>1?"s":"")+".";
-        document.getElementById("rpe-envoiDetail").textContent = detail;
-        document.getElementById("rpe-vueGrille").style.display = "none";
-        document.getElementById("rpe-vueEnvoi").style.display = "block";
-      })
-      .catch(function(){
-        document.getElementById("rpe-zoneErreur").style.display = "block";
-        document.getElementById("rpe-zoneErreur").textContent = "Erreur lors de l'envoi. Vérifiez la connexion et réessayez.";
-        btn.disabled = false;
-        btn.textContent = "Réessayer";
-      });
+    function envoyerSuivant(){
+      if(i >= noms.length){
+        if(echecs.length === 0){
+          var detail = reussis.length+" joueur"+(reussis.length>1?"s":"")+" enregistré"+(reussis.length>1?"s":"")+".";
+          document.getElementById("rpe-envoiDetail").textContent = detail;
+          document.getElementById("rpe-vueGrille").style.display = "none";
+          document.getElementById("rpe-vueEnvoi").style.display = "block";
+          reussis.forEach(function(nom){ delete saisies[nom]; });
+        } else {
+          var msg = reussis.length+"/"+noms.length+" enregistrés. Échec pour : "+echecs.join(", ")+".";
+          document.getElementById("rpe-zoneErreur").style.display = "block";
+          document.getElementById("rpe-zoneErreur").textContent = msg+" Réessayez, seuls les joueurs en échec seront renvoyés.";
+          reussis.forEach(function(nom){ delete saisies[nom]; });
+          construireGrille();
+          btn.disabled = false;
+          mettreAJourBarre();
+        }
+        return;
+      }
+      var nom = noms[i];
+      btn.textContent = "Envoi… ("+(i+1)+"/"+noms.length+")";
+      envoyerUn(nom)
+        .then(function(){ reussis.push(nom); })
+        .catch(function(){ echecs.push(nom); })
+        .then(function(){ i++; return pause(120); })
+        .then(envoyerSuivant);
+    }
+
+    envoyerSuivant();
   });
 
   document.getElementById("rpe-btnReset").addEventListener("click", function(){
