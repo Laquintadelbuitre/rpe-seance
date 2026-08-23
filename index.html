@@ -630,11 +630,17 @@
     document.getElementById("met-jourActuelTxt").textContent = estAujourdhui ? "aujourd'hui" : formatDate(new Date(jourAffiche));
     var clef = clefISO(jourAffiche);
     var data = toutesLesDonnees.filter(function(r){
-      var d = r.date;
-      if(d instanceof Date) d = clefISO(d);
-      if(typeof d === "string" && d.length > 10) d = d.substring(0,10);
-      return d === clef;
-    });
+  var d = r.date;
+  if(d instanceof Date){
+    d = clefISO(d);
+  } else if(typeof d === "string" && d.length > 10){
+    try{ var tmp=new Date(d); d=tmp.getFullYear()+"-"+String(tmp.getMonth()+1).padStart(2,"0")+"-"+String(tmp.getDate()).padStart(2,"0"); }catch(e){ d=d.substring(0,10); }
+  }
+  if(typeof d === "string" && d.length === 10){
+    try{ var tmp2=new Date(d+"T12:00:00"); d=tmp2.getFullYear()+"-"+String(tmp2.getMonth()+1).padStart(2,"0")+"-"+String(tmp2.getDate()).padStart(2,"0"); }catch(e){}
+  }
+  return d === clef;
+});
     document.getElementById("met-dashCount").textContent = data.length+(data.length===1?" réponse":" réponses");
 
     var cont = document.getElementById("met-dashContenu");
