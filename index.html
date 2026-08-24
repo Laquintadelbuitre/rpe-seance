@@ -656,7 +656,7 @@
       var info = NIVEAUX[n];
       html += '<div class="groupe"><div class="groupe-titre"><span class="dot" style="background:'+dotCouleurs[n]+'"></span>'+info.titre+' ('+parNiveau[n].length+')</div>';
       parNiveau[n].forEach(function(r){
-        html += '<div class="joueur-ligne"><span class="em">'+info.emoji+'</span><span class="nom">'+escapeHTML(r.nom)+'</span><span class="heure">'+escapeHTML(r.heure)+'</span></div>';
+        html += '<div class="joueur-ligne"><span class="em">'+info.emoji+'</span><span class="nom">'+escapeHTML(r.nom)+'</span><span class="heure">'+formatHeure(r.heure)+'</span></div>';
       });
       html += '</div>';
     });
@@ -683,6 +683,17 @@
   }
 
   function escapeHTML(s){ var d=document.createElement("div");d.textContent=s;return d.innerHTML; }
+
+  // Certaines colonnes "heure" du Google Sheet sont au format Heure seule :
+  // Apps Script les renvoie alors comme une date ancrée au 30/12/1899
+  // (ex. "1899-12-30T09:07:39.000Z"). On ignore cette date fictive et on
+  // ne garde que l'heure, reconvertie dans le fuseau local de l'appareil.
+  function formatHeure(h){
+    if(!h) return "";
+    var d = new Date(h);
+    if(isNaN(d.getTime())) return h;
+    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  }
 
 })();
 </script>
@@ -997,7 +1008,18 @@
     var estAujourdhui = clefISO(jourAffiche)===clefISO(new Date());
     document.getElementById("rpe-jourActuelTxt").textContent = estAujourdhui ? "aujourd'hui" : formatDate(new Date(jourAffiche));
     var clef = clefISO(jourAffiche);
-    var data = toutesLesDonnees.filter(function(r){ return r.date===clef; });
+    var data = toutesLesDonnees.filter(function(r){
+      var d = r.date;
+      if(d instanceof Date){
+        d = clefISO(d);
+      } else if(typeof d === "string" && d.length > 10){
+        try{ var tmp=new Date(d); d=tmp.getFullYear()+"-"+String(tmp.getMonth()+1).padStart(2,"0")+"-"+String(tmp.getDate()).padStart(2,"0"); }catch(e){ d=d.substring(0,10); }
+      }
+      if(typeof d === "string" && d.length === 10){
+        try{ var tmp2=new Date(d+"T12:00:00"); d=tmp2.getFullYear()+"-"+String(tmp2.getMonth()+1).padStart(2,"0")+"-"+String(tmp2.getDate()).padStart(2,"0"); }catch(e){}
+      }
+      return d === clef;
+    });
     document.getElementById("rpe-dashCount").textContent = data.length+(data.length===1?" réponse":" réponses");
     var cont = document.getElementById("rpe-dashContenu");
     if(data.length===0){ cont.innerHTML='<div class="dash-empty">Aucune note ce jour-là.</div>'; return; }
@@ -1015,13 +1037,22 @@
       html += '<div class="rpe-ligne">';
       html += '<div class="badge" style="background:'+c+'22;color:'+c+';border:1.5px solid '+c+'">'+r.rpe+'</div>';
       html += '<span class="nom">'+escapeHTML(r.nom)+'</span>';
-      html += '<span class="heure">'+escapeHTML(r.heure)+'</span>';
+      html += '<span class="heure">'+formatHeure(r.heure)+'</span>';
       html += '</div>';
     });
     cont.innerHTML = html;
   }
 
   function escapeHTML(s){ var d=document.createElement("div");d.textContent=s;return d.innerHTML; }
+
+  // Même correctif que la météo : une colonne "heure" au format Heure seule
+  // revient d'Apps Script ancrée au 30/12/1899. On ne garde que l'heure locale.
+  function formatHeure(h){
+    if(!h) return "";
+    var d = new Date(h);
+    if(isNaN(d.getTime())) return h;
+    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  }
 
 })();
 </script>
