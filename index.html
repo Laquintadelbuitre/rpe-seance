@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Suivi U13 — Limoges Football</title>
 <style>
-
   :root{
     --fond:#0f1115;
     --panneau:#1a1d24;
@@ -15,26 +14,45 @@
     --ligne:#2c303a;
     --bleu:#4a7dd6;
     --vert:#3a9d5a;
+    /* Météo : 5 niveaux */
     --n1:#3a9d5a; --n2:#d4a82e; --n3:#d4711f; --n4:#c4392f; --n5:#4a4a52;
+    /* RPE : 10 niveaux */
+    --c1:#3a9d5a; --c2:#5aad6a; --c3:#8fc43a; --c4:#c4c43a; --c5:#d4a82e;
+    --c6:#d4841f; --c7:#d4611f; --c8:#c4391f; --c9:#b42515; --c10:#8a1010;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
   html,body{margin:0;padding:0;}
   body{background:var(--fond);color:var(--texte);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;min-height:100vh;}
   .wrap{max-width:600px;margin:0 auto;padding:16px 14px 60px;}
 
+  /* ===== ONGLETS PRINCIPAUX ===== */
+  .app-tabs{
+    display:flex;gap:8px;max-width:600px;margin:0 auto;padding:14px 14px 0;
+    position:sticky;top:0;background:var(--fond);z-index:50;
+  }
+  .app-tab{
+    flex:1;padding:12px 10px;border-radius:12px;border:1.5px solid var(--ligne);
+    background:var(--panneau);color:var(--texte-att);font-size:14px;font-weight:700;
+    cursor:pointer;text-align:center;transition:all .12s ease;
+  }
+  .app-tab.active{border-color:var(--bleu);color:var(--texte);background:rgba(74,125,214,.14);}
+  .app-panel{display:none;}
+  .app-panel.active{display:block;}
+
+  /* ===== EN-TÊTE ===== */
   .header{text-align:center;margin-bottom:16px;}
   .header .tag{display:inline-block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--texte-att);border:1px solid var(--ligne);border-radius:999px;padding:3px 10px;margin-bottom:8px;}
   .header h1{font-size:22px;font-weight:700;margin:0 0 2px;}
   .header .date{font-size:12px;color:var(--texte-att);text-transform:capitalize;}
 
-  /* BARRE */
+  /* ===== JAUGE ===== */
   .barre-progression{display:flex;align-items:center;gap:10px;background:var(--panneau);border:1px solid var(--ligne);border-radius:12px;padding:10px 14px;margin-bottom:14px;}
   .barre-progression .prog-label{font-size:13px;color:var(--texte-att);flex:1;}
   .barre-progression .prog-chiffre{font-size:15px;font-weight:700;}
   .barre-track{flex:2;height:8px;border-radius:999px;background:var(--panneau-clair);overflow:hidden;}
   .barre-fill{height:100%;border-radius:999px;background:var(--vert);transition:width .3s ease;}
 
-  /* MODE EDUCATEUR */
+  /* ===== MODE ÉDUCATEUR ===== */
   .mode-edu-bar{
     display:flex;align-items:center;justify-content:space-between;
     background:rgba(74,125,214,.1);border:1px solid rgba(74,125,214,.3);
@@ -43,31 +61,29 @@
   .mode-edu-bar span{font-size:13px;color:var(--bleu);}
   .mode-edu-bar button{background:none;border:1px solid rgba(74,125,214,.4);color:var(--bleu);font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer;}
 
-  /* GRILLE JOUEURS */
+  /* ===== GRILLE JOUEURS ===== */
   .grille-joueurs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
   .joueur-card{
     background:var(--panneau);border:1.5px solid var(--ligne);border-radius:14px;
-    padding:12px 8px;text-align:center;cursor:pointer;
-    transition:transform .08s ease;position:relative;
+    padding:12px 8px;text-align:center;cursor:pointer;position:relative;
+    transition:transform .08s ease, border-color .1s ease;
   }
   .joueur-card:active:not(.verrouille){transform:scale(0.95);}
   .joueur-card .j-nom{font-size:13.5px;font-weight:700;line-height:1.2;}
   .joueur-card .j-info{font-size:12px;margin-top:4px;height:18px;}
+  .joueur-card .j-rpe{font-size:11px;color:var(--texte-att);margin-top:4px;height:16px;}
   .joueur-card .check{position:absolute;top:6px;right:8px;font-size:11px;width:18px;height:18px;border-radius:50%;background:var(--vert);display:none;align-items:center;justify-content:center;color:#fff;font-weight:700;}
-
-  /* États */
   .joueur-card.fait{border-color:var(--vert);cursor:default;}
   .joueur-card.fait .check{display:flex;}
   .joueur-card.verrouille{opacity:.5;cursor:not-allowed;}
   .joueur-card.modifiable{border-color:var(--bleu);cursor:pointer;}
-  .joueur-card.actif{border-color:var(--bleu);background:rgba(74,125,214,.1);}
 
-  /* VUE NIVEAUX */
+  .btn-retour{background:var(--panneau-clair);border:1px solid var(--ligne);color:var(--texte);padding:9px 14px;border-radius:10px;font-size:13px;cursor:pointer;flex-shrink:0;}
+
+  /* ===== MÉTÉO : CHOIX DU NIVEAU ===== */
   #met-vueNiveaux{display:none;}
   .niveaux-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
-  .btn-retour{background:var(--panneau-clair);border:1px solid var(--ligne);color:var(--texte);padding:9px 14px;border-radius:10px;font-size:13px;cursor:pointer;flex-shrink:0;}
   .niveaux-nom{font-size:20px;font-weight:800;}
-
   .niveaux-liste{display:flex;flex-direction:column;gap:10px;}
   .niveau-btn{
     display:flex;align-items:center;gap:14px;width:100%;text-align:left;
@@ -80,20 +96,64 @@
   .niveau-btn .txt .titre{font-size:14.5px;font-weight:700;display:block;margin-bottom:2px;}
   .niveau-btn .txt .sous{font-size:12px;color:var(--texte-att);line-height:1.3;}
   .niveau-btn .num{font-size:12px;color:var(--texte-att);font-weight:700;width:20px;text-align:center;flex-shrink:0;}
-
   .niveau-btn.n1 .pastille{background:rgba(58,157,90,.18);}
   .niveau-btn.n2 .pastille{background:rgba(212,168,46,.18);}
   .niveau-btn.n3 .pastille{background:rgba(212,113,31,.18);}
   .niveau-btn.n4 .pastille{background:rgba(196,57,47,.18);}
   .niveau-btn.n5 .pastille{background:rgba(255,255,255,.06);}
 
-  /* FLASH */
+  /* ===== RPE : CHOIX DE LA NOTE ===== */
+  #rpe-vueRPE{display:none;}
+  .rpe-header{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+  .rpe-joueur-nom{font-size:20px;font-weight:800;}
+  .rpe-instruction{font-size:13px;color:var(--texte-att);margin-bottom:14px;text-align:center;}
+  .rpe-grille-grande{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;}
+  .rpe-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .rpe-grand-btn{
+    width:100%;aspect-ratio:1;border-radius:14px;border:2px solid var(--ligne);
+    background:var(--panneau-clair);color:var(--texte);
+    font-size:22px;font-weight:800;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .06s ease;
+  }
+  .rpe-grand-btn:active{transform:scale(0.88);}
+  .rpe-libelle{font-size:9px;color:var(--texte-att);text-align:center;line-height:1.2;}
+  .rpe-grand-btn[data-n="1"]{border-color:var(--c1);}
+  .rpe-grand-btn[data-n="2"]{border-color:var(--c2);}
+  .rpe-grand-btn[data-n="3"]{border-color:var(--c3);}
+  .rpe-grand-btn[data-n="4"]{border-color:var(--c4);}
+  .rpe-grand-btn[data-n="5"]{border-color:var(--c5);}
+  .rpe-grand-btn[data-n="6"]{border-color:var(--c6);}
+  .rpe-grand-btn[data-n="7"]{border-color:var(--c7);}
+  .rpe-grand-btn[data-n="8"]{border-color:var(--c8);}
+  .rpe-grand-btn[data-n="9"]{border-color:var(--c9);}
+  .rpe-grand-btn[data-n="10"]{border-color:var(--c10);}
+  .rpe-grand-btn[data-n="1"]:active{background:rgba(58,157,90,.3);}
+  .rpe-grand-btn[data-n="2"]:active{background:rgba(90,173,106,.3);}
+  .rpe-grand-btn[data-n="3"]:active{background:rgba(143,196,58,.3);}
+  .rpe-grand-btn[data-n="4"]:active{background:rgba(196,196,58,.3);}
+  .rpe-grand-btn[data-n="5"]:active{background:rgba(212,168,46,.3);}
+  .rpe-grand-btn[data-n="6"]:active{background:rgba(212,132,31,.3);}
+  .rpe-grand-btn[data-n="7"]:active{background:rgba(212,97,31,.3);}
+  .rpe-grand-btn[data-n="8"]:active{background:rgba(196,57,31,.3);}
+  .rpe-grand-btn[data-n="9"]:active{background:rgba(180,37,21,.3);}
+  .rpe-grand-btn[data-n="10"]:active{background:rgba(138,16,16,.3);}
+  .rpe-legende{display:flex;justify-content:space-between;font-size:11px;color:var(--texte-att);margin-bottom:16px;}
+
+  .erreur{
+    display:none;background:rgba(196,57,47,.12);border:1px solid rgba(196,57,47,.4);
+    color:#e8a39d;font-size:13px;padding:12px 14px;border-radius:12px;margin-top:12px;cursor:pointer;
+  }
+
+  /* ===== FLASH DE CONFIRMATION ===== */
   .flash{display:none;position:fixed;top:0;left:0;right:0;bottom:0;align-items:center;justify-content:center;flex-direction:column;background:rgba(15,17,21,.92);z-index:100;}
   .flash.show{display:flex;}
   .flash .flash-emoji{font-size:72px;margin-bottom:10px;}
-  .flash .flash-nom{font-size:24px;font-weight:800;}
+  .flash .flash-nom{font-size:28px;font-weight:800;margin-bottom:6px;}
+  .flash .flash-note{font-size:72px;font-weight:800;line-height:1;}
+  .flash .flash-label{font-size:14px;color:var(--texte-att);margin-top:8px;}
 
-  /* DASHBOARD */
+  /* ===== TABLEAU DE BORD COACH ===== */
   .toggle-zone{margin-top:24px;text-align:center;}
   .toggle-btn{background:none;border:1px solid var(--ligne);color:var(--texte-att);font-size:13px;padding:9px 18px;border-radius:999px;cursor:pointer;}
   .dashboard{display:none;margin-top:20px;}
@@ -113,6 +173,7 @@
   .dash-loading{text-align:center;color:var(--texte-att);font-size:13px;padding:24px;}
   .dash-empty{text-align:center;color:var(--texte-att);font-size:14px;padding:30px;border:1px dashed var(--ligne);border-radius:14px;}
 
+  /* Météo : vue du jour */
   .groupe{margin-bottom:14px;}
   .groupe-titre{display:flex;align-items:center;gap:8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--texte-att);margin-bottom:8px;font-weight:700;}
   .groupe-titre .dot{width:9px;height:9px;border-radius:50%;}
@@ -121,7 +182,7 @@
   .joueur-ligne .nom{flex:1;font-size:14.5px;font-weight:600;}
   .joueur-ligne .heure{font-size:11.5px;color:var(--texte-att);}
 
-  /* Historique joueur */
+  /* Météo : historique joueur */
   .select-histo{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--ligne);background:var(--panneau-clair);color:var(--texte);font-size:14px;margin-bottom:14px;appearance:none;}
   .histo-ligne{display:flex;align-items:center;gap:10px;background:var(--panneau);border:1px solid var(--ligne);border-radius:10px;padding:9px 12px;margin-bottom:6px;}
   .histo-ligne .em{font-size:17px;}
@@ -130,160 +191,7 @@
   .moyenne-card .chiffre{font-size:28px;font-weight:700;}
   .moyenne-card .label{font-size:12px;color:var(--texte-att);margin-top:2px;}
 
-  .dash-actions{display:flex;gap:10px;margin-top:12px;}
-  .dash-actions button{flex:1;background:var(--panneau);border:1px solid var(--ligne);color:var(--texte-att);padding:10px;border-radius:10px;font-size:13px;cursor:pointer;}
-  .footer-note{text-align:center;color:var(--texte-att);font-size:11.5px;margin-top:24px;line-height:1.5;}
-
-
-  :root{
-    --fond:#0f1115;
-    --panneau:#1a1d24;
-    --panneau-clair:#22262f;
-    --texte:#eef0f3;
-    --texte-att:#9aa0ad;
-    --ligne:#2c303a;
-    --bleu:#4a7dd6;
-    --vert:#3a9d5a;
-    --c1:#3a9d5a; --c2:#5aad6a; --c3:#8fc43a; --c4:#c4c43a; --c5:#d4a82e;
-    --c6:#d4841f; --c7:#d4611f; --c8:#c4391f; --c9:#b42515; --c10:#8a1010;
-  }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
-  html,body{margin:0;padding:0;}
-  body{background:var(--fond);color:var(--texte);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;min-height:100vh;}
-  .wrap{max-width:600px;margin:0 auto;padding:16px 14px 60px;}
-
-  /* HEADER */
-  .header{text-align:center;margin-bottom:16px;}
-  .header .tag{display:inline-block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--texte-att);border:1px solid var(--ligne);border-radius:999px;padding:3px 10px;margin-bottom:8px;}
-  .header h1{font-size:22px;font-weight:700;margin:0 0 2px;}
-  .header .date{font-size:12px;color:var(--texte-att);text-transform:capitalize;}
-
-  /* ETAT GLOBAL */
-  .barre-progression{
-    display:flex;align-items:center;gap:10px;background:var(--panneau);
-    border:1px solid var(--ligne);border-radius:12px;padding:10px 14px;margin-bottom:14px;
-  }
-  .barre-progression .prog-label{font-size:13px;color:var(--texte-att);flex:1;}
-  .barre-progression .prog-chiffre{font-size:15px;font-weight:700;}
-  .barre-track{flex:2;height:8px;border-radius:999px;background:var(--panneau-clair);overflow:hidden;}
-  .barre-fill{height:100%;border-radius:999px;background:var(--vert);transition:width .3s ease;}
-
-  /* ===== VUE GRILLE JOUEURS ===== */
-  #rpe-vueGrille{}
-  .grille-joueurs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
-  .joueur-card{
-    background:var(--panneau);border:1.5px solid var(--ligne);border-radius:14px;
-    padding:12px 8px;text-align:center;cursor:pointer;
-    transition:transform .08s ease, border-color .1s ease;
-    position:relative;
-  }
-  .joueur-card:active{transform:scale(0.95);}
-  .joueur-card .j-nom{font-size:13.5px;font-weight:700;line-height:1.2;}
-  .joueur-card .j-rpe{font-size:11px;color:var(--texte-att);margin-top:4px;height:16px;}
-  .joueur-card.fait{border-color:var(--vert);}
-  .joueur-card.fait .j-nom{color:var(--texte);}
-  .joueur-card .check{
-    position:absolute;top:6px;right:8px;font-size:11px;
-    width:18px;height:18px;border-radius:50%;background:var(--vert);
-    display:none;align-items:center;justify-content:center;color:#fff;font-weight:700;
-  }
-  .joueur-card.fait .check{display:flex;}
-  .joueur-card.actif{border-color:var(--bleu);background:rgba(74,125,214,.1);}
-
-  .btn-envoyer{
-    width:100%;padding:16px;border-radius:14px;border:none;
-    background:var(--vert);color:#fff;font-size:16px;font-weight:700;cursor:pointer;
-    display:none;
-  }
-  .btn-envoyer.visible{display:block;}
-  .btn-envoyer:active{transform:scale(0.98);}
-  .btn-envoyer:disabled{background:#3a3e48;color:#7a7e88;cursor:not-allowed;}
-
-  /* ===== VUE SELECTION RPE ===== */
-  #rpe-vueRPE{display:none;}
-  .rpe-header{
-    display:flex;align-items:center;gap:12px;margin-bottom:18px;
-  }
-  .btn-retour{
-    background:var(--panneau-clair);border:1px solid var(--ligne);color:var(--texte);
-    padding:9px 14px;border-radius:10px;font-size:13px;cursor:pointer;flex-shrink:0;
-  }
-  .rpe-joueur-nom{font-size:20px;font-weight:800;}
-
-  .rpe-instruction{font-size:13px;color:var(--texte-att);margin-bottom:14px;text-align:center;}
-
-  .rpe-grille-grande{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;}
-  .rpe-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
-  .rpe-grand-btn{
-    width:100%;aspect-ratio:1;border-radius:14px;border:2px solid var(--ligne);
-    background:var(--panneau-clair);color:var(--texte);
-    font-size:22px;font-weight:800;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-    transition:transform .06s ease;
-  }
-  .rpe-grand-btn:active{transform:scale(0.88);}
-  .rpe-libelle{font-size:9px;color:var(--texte-att);text-align:center;line-height:1.2;}
-
-  .rpe-grand-btn[data-n="1"]{border-color:var(--c1);}
-  .rpe-grand-btn[data-n="2"]{border-color:var(--c2);}
-  .rpe-grand-btn[data-n="3"]{border-color:var(--c3);}
-  .rpe-grand-btn[data-n="4"]{border-color:var(--c4);}
-  .rpe-grand-btn[data-n="5"]{border-color:var(--c5);}
-  .rpe-grand-btn[data-n="6"]{border-color:var(--c6);}
-  .rpe-grand-btn[data-n="7"]{border-color:var(--c7);}
-  .rpe-grand-btn[data-n="8"]{border-color:var(--c8);}
-  .rpe-grand-btn[data-n="9"]{border-color:var(--c9);}
-  .rpe-grand-btn[data-n="10"]{border-color:var(--c10);}
-
-  .rpe-grand-btn[data-n="1"]:active{background:rgba(58,157,90,.3);}
-  .rpe-grand-btn[data-n="2"]:active{background:rgba(90,173,106,.3);}
-  .rpe-grand-btn[data-n="3"]:active{background:rgba(143,196,58,.3);}
-  .rpe-grand-btn[data-n="4"]:active{background:rgba(196,196,58,.3);}
-  .rpe-grand-btn[data-n="5"]:active{background:rgba(212,168,46,.3);}
-  .rpe-grand-btn[data-n="6"]:active{background:rgba(212,132,31,.3);}
-  .rpe-grand-btn[data-n="7"]:active{background:rgba(212,97,31,.3);}
-  .rpe-grand-btn[data-n="8"]:active{background:rgba(196,57,31,.3);}
-  .rpe-grand-btn[data-n="9"]:active{background:rgba(180,37,21,.3);}
-  .rpe-grand-btn[data-n="10"]:active{background:rgba(138,16,16,.3);}
-
-  .rpe-legende{display:flex;justify-content:space-between;font-size:11px;color:var(--texte-att);margin-bottom:16px;}
-
-  /* FLASH CONFIRMATION */
-  .flash{
-    display:none;position:fixed;top:0;left:0;right:0;bottom:0;
-    align-items:center;justify-content:center;flex-direction:column;
-    background:rgba(15,17,21,.92);z-index:100;
-  }
-  .flash.show{display:flex;}
-  .flash .flash-nom{font-size:28px;font-weight:800;margin-bottom:6px;}
-  .flash .flash-note{font-size:72px;font-weight:800;line-height:1;}
-  .flash .flash-label{font-size:14px;color:var(--texte-att);margin-top:8px;}
-
-  /* ECRAN ENVOI */
-  #rpe-vueEnvoi{display:none;text-align:center;padding:30px 10px;}
-  #rpe-vueEnvoi .grand-emoji{font-size:54px;margin-bottom:12px;display:block;}
-  #rpe-vueEnvoi h2{font-size:20px;margin:0 0 8px;}
-  #rpe-vueEnvoi p{color:var(--texte-att);font-size:14px;margin:0 0 22px;}
-  #rpe-vueEnvoi .btn-reset{background:none;border:1px solid var(--ligne);color:var(--texte);padding:11px 20px;border-radius:12px;font-size:14px;cursor:pointer;}
-
-  .erreur{
-    display:none;background:rgba(196,57,47,.12);border:1px solid rgba(196,57,47,.4);
-    color:#e8a39d;font-size:13px;padding:12px 14px;border-radius:12px;margin-top:12px;
-  }
-
-  /* DASHBOARD */
-  .toggle-zone{margin-top:24px;text-align:center;}
-  .toggle-btn{background:none;border:1px solid var(--ligne);color:var(--texte-att);font-size:13px;padding:9px 18px;border-radius:999px;cursor:pointer;}
-  .dashboard{display:none;margin-top:20px;}
-  .dashboard.show{display:block;}
-  .nav-jour{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;}
-  .nav-jour button{background:var(--panneau-clair);border:1px solid var(--ligne);color:var(--texte);width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:16px;}
-  .nav-jour .jour-actuel{flex:1;text-align:center;font-size:14px;font-weight:700;text-transform:capitalize;}
-  .dash-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
-  .dash-head h2{font-size:16px;margin:0;}
-  .dash-head .count{font-size:13px;color:var(--texte-att);}
-  .dash-loading{text-align:center;color:var(--texte-att);font-size:13px;padding:24px;}
-  .dash-empty{text-align:center;color:var(--texte-att);font-size:14px;padding:30px;border:1px dashed var(--ligne);border-radius:14px;}
+  /* RPE : vue du jour */
   .rpe-ligne{display:flex;align-items:center;gap:10px;background:var(--panneau);border:1px solid var(--ligne);border-radius:12px;padding:10px 12px;margin-bottom:6px;}
   .rpe-ligne .badge{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0;}
   .rpe-ligne .nom{flex:1;font-size:14.5px;font-weight:600;}
@@ -291,36 +199,74 @@
   .moyenne-zone{background:var(--panneau-clair);border:1px solid var(--ligne);border-radius:14px;padding:14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
   .moyenne-zone .label{font-size:13px;color:var(--texte-att);}
   .moyenne-zone .chiffre{font-size:28px;font-weight:800;}
+
   .dash-actions{display:flex;gap:10px;margin-top:12px;}
   .dash-actions button{flex:1;background:var(--panneau);border:1px solid var(--ligne);color:var(--texte-att);padding:10px;border-radius:10px;font-size:13px;cursor:pointer;}
   .footer-note{text-align:center;color:var(--texte-att);font-size:11.5px;margin-top:24px;line-height:1.5;}
-
-
-  /* ===== ONGLETS PRINCIPAUX ===== */
-  .app-tabs{
-    display:flex;gap:8px;max-width:600px;margin:0 auto;padding:14px 14px 0;
-    position:sticky;top:0;background:var(--fond);z-index:50;
-  }
-  .app-tab{
-    flex:1;padding:12px 10px;border-radius:12px;border:1.5px solid var(--ligne);
-    background:var(--panneau);color:var(--texte-att);font-size:14px;font-weight:700;
-    cursor:pointer;text-align:center;transition:all .12s ease;
-  }
-  .app-tab.active{border-color:var(--bleu);color:var(--texte);background:rgba(74,125,214,.14);}
-  .app-panel{display:none;}
-  .app-panel.active{display:block;}
-
 </style>
 </head>
 <body>
 
 <div class="app-tabs">
-  <button class="app-tab active" id="tabBtnMeteo" data-cible="panelMeteo">☀️ Météo du jour</button>
-  <button class="app-tab" id="tabBtnRpe" data-cible="panelRpe">💪 RPE Post-séance</button>
+  <button class="app-tab active" data-cible="panelMeteo">☀️ Météo du jour</button>
+  <button class="app-tab" data-cible="panelRpe">💪 RPE Post-séance</button>
 </div>
 
-<div class="app-panel active" id="panelMeteo">
+<!-- ===================================================== -->
+<!-- OUTILS COMMUNS AUX DEUX ONGLETS                       -->
+<!-- ===================================================== -->
+<script>
+  // Effectif : à modifier ici uniquement (sert aux deux onglets)
+  var EFFECTIF = ["Abdoul Karim","Adam","Bakoutoubo","Bilel","Emir","Ethan","Gabin","Hadi","Issam","Jalil","Kalifa","Keys","Loan","Mathis","Melih","Mickaël","Nourou","Pablo","Sacha","Sarah","Sebastien","Selyan","Yanis"];
+  var CODE_PIN = "0501";
+  var SESSION_COACH = "u13_coach_session"; // code saisi une fois = valable pour les deux onglets
 
+  var moisFr = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  var joursFr = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+  function formatDate(d){ return joursFr[d.getDay()]+" "+d.getDate()+" "+moisFr[d.getMonth()]; }
+  function clefISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+
+  // Date renvoyée par Apps Script ("2026-09-24" ou "2026-09-23T22:00:00.000Z")
+  // → clé "AAAA-MM-JJ" dans le fuseau local de l'appareil.
+  function normaliserDate(d){
+    if(typeof d !== "string") return "";
+    if(d.length > 10){ var t = new Date(d); return isNaN(t.getTime()) ? d.substring(0,10) : clefISO(t); }
+    return d;
+  }
+
+  // Une colonne "heure" au format Heure seule revient d'Apps Script ancrée
+  // au 30/12/1899 (ex. "1899-12-30T09:07:39.000Z") : on ne garde que l'heure locale.
+  function formatHeure(h){
+    if(!h) return "";
+    var d = new Date(h);
+    if(isNaN(d.getTime())) return h;
+    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  }
+
+  function escapeHTML(s){ var d=document.createElement("div");d.textContent=s;return d.innerHTML; }
+
+  // Demande le code coach si pas encore saisi pendant cette session
+  function verifierCode(){
+    if(sessionStorage.getItem(SESSION_COACH) === "1") return true;
+    var s = prompt("Code éducateur (4 chiffres) :");
+    if(!s || s.trim() !== CODE_PIN){ alert("Code incorrect."); return false; }
+    sessionStorage.setItem(SESSION_COACH,"1");
+    return true;
+  }
+
+  function lireStockage(clef, defaut){
+    try{ var raw = localStorage.getItem(clef); if(raw) return JSON.parse(raw); }catch(e){}
+    return defaut;
+  }
+  function ecrireStockage(clef, valeur){
+    try{ localStorage.setItem(clef, JSON.stringify(valeur)); }catch(e){}
+  }
+</script>
+
+<!-- ===================================================== -->
+<!-- ONGLET 1 : MÉTÉO DU JOUR                              -->
+<!-- ===================================================== -->
+<div class="app-panel active" id="panelMeteo">
 <div class="wrap">
 
   <div class="header">
@@ -332,21 +278,18 @@
   <div class="barre-progression">
     <span class="prog-label">Joueurs renseignés</span>
     <div class="barre-track"><div class="barre-fill" id="met-barreFill" style="width:0%"></div></div>
-    <span class="prog-chiffre" id="met-progChiffre">0 / 22</span>
+    <span class="prog-chiffre" id="met-progChiffre"></span>
   </div>
 
-  <!-- MODE EDUCATEUR (masqué par défaut) -->
   <div class="mode-edu-bar" id="met-modeEduBar" style="display:none;">
     <span>🔓 Mode éducateur activé</span>
     <button id="met-btnQuitterEdu">Verrouiller</button>
   </div>
 
-  <!-- VUE GRILLE -->
   <div id="met-vueGrille">
     <div class="grille-joueurs" id="met-grilleJoueurs"></div>
   </div>
 
-  <!-- VUE NIVEAUX -->
   <div id="met-vueNiveaux">
     <div class="niveaux-header">
       <button class="btn-retour" id="met-btnRetour">← Retour</button>
@@ -381,13 +324,11 @@
     </div>
   </div>
 
-  <!-- FLASH -->
   <div class="flash" id="met-flash">
     <div class="flash-emoji" id="met-flashEmoji"></div>
     <div class="flash-nom" id="met-flashNom"></div>
   </div>
 
-  <!-- DASHBOARD -->
   <div class="toggle-zone">
     <button class="toggle-btn" id="met-btnToggleDash">Voir le tableau de bord coach</button>
   </div>
@@ -427,99 +368,52 @@
 (function(){
 
   var URL_SCRIPT = "https://script.google.com/macros/s/AKfycbw9ychbh5oSoc-k22FnT7mmCf04684C2hJmllRDATvNQR37I_Udwpn3mHTAVvA3af9cRQ/exec";
-  var CODE_PIN = "0501";
-  var SESSION_COACH = "meteo_coach_session";
   var SESSION_EDU = "meteo_edu_mode";
-
-  var EFFECTIF = ["Abdoul Karim","Adam","Bakoutoubo","Bilel","Emir","Ethan","Gabin","Hadi","Issam","Jalil","Kalifa","Keys","Loan","Mathis","Melih","Mickaël","Nourou","Pablo","Sacha","Sarah","Sebastien","Selyan","Yanis"];
+  var STORAGE_SAISIES = "meteo_saisies_" + clefISO(new Date());
 
   var NIVEAUX = {
-    1:{emoji:"🟩", titre:"Pleine forme !", couleur:"var(--n1)"},
-    2:{emoji:"🟨", titre:"Un peu lourd", couleur:"var(--n2)"},
-    3:{emoji:"🟧", titre:"Fatigué", couleur:"var(--n3)"},
-    4:{emoji:"🟥", titre:"Très fatigué", couleur:"var(--n4)"},
+    1:{emoji:"🟩", titre:"Pleine forme !",   couleur:"var(--n1)"},
+    2:{emoji:"🟨", titre:"Un peu lourd",     couleur:"var(--n2)"},
+    3:{emoji:"🟧", titre:"Fatigué",          couleur:"var(--n3)"},
+    4:{emoji:"🟥", titre:"Très fatigué",     couleur:"var(--n4)"},
     5:{emoji:"⬛", titre:"Épuisé / Douleur", couleur:"var(--n5)"}
   };
 
-  var moisFr = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
-  var joursFr = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
-  function formatDate(d){ return joursFr[d.getDay()]+" "+d.getDate()+" "+moisFr[d.getMonth()]; }
-  function clefISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
-
   document.getElementById("met-dateAffichee").textContent = formatDate(new Date());
 
-  // ---------- ÉTAT ----------
-  var STORAGE_SAISIES = "meteo_saisies_" + (function(){
-    var d = new Date();
-    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-  })();
-  var saisies = {};
-  try{ var raw = localStorage.getItem(STORAGE_SAISIES); if(raw) saisies = JSON.parse(raw); }catch(e){}
+  // ---------- ÉTAT (sauvegardé pour la journée) ----------
+  var saisies = lireStockage(STORAGE_SAISIES, {}); // {nom: niveau}
   var joueurActif = null;
-  var modeEdu = false;
-
-  function sauverSaisies(){ try{ localStorage.setItem(STORAGE_SAISIES, JSON.stringify(saisies)); }catch(e){} }
+  var modeEdu = sessionStorage.getItem(SESSION_EDU) === "1";
 
   // ---------- MODE ÉDUCATEUR ----------
-  function activerModeEdu(){
-    modeEdu = true;
-    sessionStorage.setItem(SESSION_EDU, "1");
-    document.getElementById("met-modeEduBar").style.display = "flex";
+  function reglerModeEdu(actif){
+    modeEdu = actif;
+    if(actif) sessionStorage.setItem(SESSION_EDU, "1"); else sessionStorage.removeItem(SESSION_EDU);
+    document.getElementById("met-modeEduBar").style.display = actif ? "flex" : "none";
     construireGrille();
   }
-  function desactiverModeEdu(){
-    modeEdu = false;
-    sessionStorage.removeItem(SESSION_EDU);
-    document.getElementById("met-modeEduBar").style.display = "none";
-    construireGrille();
-  }
-  document.getElementById("met-btnQuitterEdu").addEventListener("click", desactiverModeEdu);
-  document.getElementById("met-btnModeEdu").addEventListener("click", function(){
-    var ok = sessionStorage.getItem(SESSION_COACH) === "1";
-    if(!ok){
-      var s = prompt("Code éducateur (4 chiffres) :");
-      if(!s || s.trim() !== CODE_PIN){ alert("Code incorrect."); return; }
-      sessionStorage.setItem(SESSION_COACH,"1");
-    }
-    activerModeEdu();
-  });
-
-  // Restaurer mode éducateur si session active
-  if(sessionStorage.getItem(SESSION_EDU) === "1"){
-    modeEdu = true;
-    document.getElementById("met-modeEduBar").style.display = "flex";
-  }
+  document.getElementById("met-btnQuitterEdu").addEventListener("click", function(){ reglerModeEdu(false); });
+  document.getElementById("met-btnModeEdu").addEventListener("click", function(){ if(verifierCode()) reglerModeEdu(true); });
 
   // ---------- GRILLE JOUEURS ----------
   function construireGrille(){
     var grille = document.getElementById("met-grilleJoueurs");
     grille.innerHTML = "";
     var nb = Object.keys(saisies).length;
-    var total = EFFECTIF.length;
-    document.getElementById("met-barreFill").style.width = Math.round(nb/total*100)+"%";
-    document.getElementById("met-progChiffre").textContent = nb+" / "+total;
+    document.getElementById("met-barreFill").style.width = Math.round(nb/EFFECTIF.length*100)+"%";
+    document.getElementById("met-progChiffre").textContent = nb+" / "+EFFECTIF.length;
 
     EFFECTIF.forEach(function(nom){
       var card = document.createElement("div");
       card.className = "joueur-card";
       var fait = saisies.hasOwnProperty(nom);
-
+      var info = "";
       if(fait){
-        card.classList.add("fait");
-        if(modeEdu){
-          // En mode éducateur : affiche l'émoji + possibilité de modifier
-          card.classList.add("modifiable");
-          var info = NIVEAUX[saisies[nom]];
-          card.innerHTML = '<div class="j-nom">'+nom+'</div><div class="j-info">'+info.emoji+'</div><div class="check">✓</div>';
-        } else {
-          // Mode normal : prénom vert + check, pas de réponse visible, verrouillé
-          card.classList.add("verrouille");
-          card.innerHTML = '<div class="j-nom">'+nom+'</div><div class="j-info"></div><div class="check">✓</div>';
-        }
-      } else {
-        card.innerHTML = '<div class="j-nom">'+nom+'</div><div class="j-info"></div>';
+        card.classList.add("fait", modeEdu ? "modifiable" : "verrouille");
+        if(modeEdu) info = NIVEAUX[saisies[nom]].emoji; // réponse visible seulement pour l'éducateur
       }
-
+      card.innerHTML = '<div class="j-nom">'+nom+'</div><div class="j-info">'+info+'</div>'+(fait ? '<div class="check">✓</div>' : '');
       card.addEventListener("click", function(){
         if(fait && !modeEdu) return; // verrouillé
         ouvrirNiveaux(nom);
@@ -528,34 +422,28 @@
     });
   }
 
-  // ---------- VUE NIVEAUX ----------
+  // ---------- CHOIX DU NIVEAU ----------
+  function afficherVue(niveaux){
+    document.getElementById("met-vueGrille").style.display = niveaux ? "none" : "block";
+    document.getElementById("met-vueNiveaux").style.display = niveaux ? "block" : "none";
+  }
   function ouvrirNiveaux(nom){
     joueurActif = nom;
     document.getElementById("met-niveauxNom").textContent = nom;
-    document.getElementById("met-vueGrille").style.display = "none";
-    document.getElementById("met-vueNiveaux").style.display = "block";
+    afficherVue(true);
   }
-
   document.getElementById("met-btnRetour").addEventListener("click", function(){
     joueurActif = null;
-    document.getElementById("met-vueNiveaux").style.display = "none";
-    document.getElementById("met-vueGrille").style.display = "block";
+    afficherVue(false);
   });
 
-  document.querySelectorAll(".niveau-btn").forEach(function(btn){
+  document.querySelectorAll("#met-vueNiveaux .niveau-btn").forEach(function(btn){
     btn.addEventListener("click", function(){
       if(!joueurActif) return;
       var n = parseInt(btn.getAttribute("data-n"),10);
       var nom = joueurActif;
       saisies[nom] = n;
-      sauverSaisies();
-
-      // Flash
-      var info = NIVEAUX[n];
-      document.getElementById("met-flashEmoji").textContent = info.emoji;
-      document.getElementById("met-flashNom").textContent = nom;
-      var flash = document.getElementById("met-flash");
-      flash.classList.add("show");
+      ecrireStockage(STORAGE_SAISIES, saisies);
 
       // Envoi immédiat
       fetch(URL_SCRIPT, {
@@ -564,46 +452,48 @@
         body: JSON.stringify({nom:nom, niveau:n})
       }).catch(function(){});
 
+      // Flash
+      document.getElementById("met-flashEmoji").textContent = NIVEAUX[n].emoji;
+      document.getElementById("met-flashNom").textContent = nom;
+      var flash = document.getElementById("met-flash");
+      flash.classList.add("show");
       setTimeout(function(){
         flash.classList.remove("show");
         joueurActif = null;
-        document.getElementById("met-vueNiveaux").style.display = "none";
-        document.getElementById("met-vueGrille").style.display = "block";
+        afficherVue(false);
         construireGrille();
       }, 600);
     });
   });
 
+  if(modeEdu) document.getElementById("met-modeEduBar").style.display = "flex";
   construireGrille();
 
-  // ---------- DASHBOARD ----------
+  // ---------- TABLEAU DE BORD ----------
   var dashboard = document.getElementById("met-dashboard");
   var btnToggleDash = document.getElementById("met-btnToggleDash");
   var toutesLesDonnees = null;
   var jourAffiche = new Date();
-  var ongletDash = "jour";
 
   btnToggleDash.addEventListener("click", function(){
-    var dejaOuvert = dashboard.classList.contains("show");
-    if(dejaOuvert){ dashboard.classList.remove("show"); btnToggleDash.textContent="Voir le tableau de bord coach"; return; }
-    var ok = sessionStorage.getItem(SESSION_COACH) === "1";
-    if(!ok){
-      var s = prompt("Code coach (4 chiffres) :");
-      if(!s || s.trim() !== CODE_PIN){ alert("Code incorrect."); return; }
-      sessionStorage.setItem(SESSION_COACH,"1");
+    if(dashboard.classList.contains("show")){
+      dashboard.classList.remove("show");
+      btnToggleDash.textContent = "Voir le tableau de bord coach";
+      return;
     }
+    if(!verifierCode()) return;
     dashboard.classList.add("show");
     btnToggleDash.textContent = "Masquer le tableau de bord";
     chargerDonnees();
   });
 
-  document.querySelectorAll(".dash-tab").forEach(function(tab){
+  document.querySelectorAll("#met-dashboard .dash-tab").forEach(function(tab){
     tab.addEventListener("click", function(){
-      document.querySelectorAll(".dash-tab").forEach(function(t){ t.classList.remove("active"); });
+      document.querySelectorAll("#met-dashboard .dash-tab").forEach(function(t){ t.classList.remove("active"); });
       tab.classList.add("active");
-      ongletDash = tab.getAttribute("data-onglet");
-      document.getElementById("met-vueJour").style.display = ongletDash==="jour" ? "block" : "none";
-      document.getElementById("met-vueHistorique").style.display = ongletDash==="historique" ? "block" : "none";
+      var onglet = tab.getAttribute("data-onglet");
+      document.getElementById("met-vueJour").style.display = onglet==="jour" ? "block" : "none";
+      document.getElementById("met-vueHistorique").style.display = onglet==="historique" ? "block" : "none";
     });
   });
 
@@ -611,36 +501,27 @@
   document.getElementById("met-jourPrecedent").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()-1); afficherJour(); });
   document.getElementById("met-jourSuivant").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()+1); afficherJour(); });
 
-  // Select historique
   var selHisto = document.getElementById("met-selectHistoJoueur");
-  EFFECTIF.forEach(function(nom){ var o=document.createElement("option");o.value=nom;o.textContent=nom;selHisto.appendChild(o); });
+  EFFECTIF.forEach(function(nom){ var o=document.createElement("option"); o.value=nom; o.textContent=nom; selHisto.appendChild(o); });
   selHisto.addEventListener("change", function(){ afficherHistorique(this.value); });
 
   function chargerDonnees(){
     document.getElementById("met-dashContenu").innerHTML = '<div class="dash-loading">Chargement…</div>';
     fetch(URL_SCRIPT)
       .then(function(r){ return r.json(); })
-      .then(function(d){ toutesLesDonnees=d; afficherJour(); })
+      .then(function(d){
+        toutesLesDonnees = d;
+        afficherJour();
+        afficherHistorique(selHisto.value);
+      })
       .catch(function(){ document.getElementById("met-dashContenu").innerHTML='<div class="dash-empty">Impossible de charger.</div>'; });
   }
 
   function afficherJour(){
     if(!toutesLesDonnees) return;
-    var estAujourdhui = clefISO(jourAffiche)===clefISO(new Date());
-    document.getElementById("met-jourActuelTxt").textContent = estAujourdhui ? "aujourd'hui" : formatDate(new Date(jourAffiche));
     var clef = clefISO(jourAffiche);
-    var data = toutesLesDonnees.filter(function(r){
-  var d = r.date;
-  if(d instanceof Date){
-    d = clefISO(d);
-  } else if(typeof d === "string" && d.length > 10){
-    try{ var tmp=new Date(d); d=tmp.getFullYear()+"-"+String(tmp.getMonth()+1).padStart(2,"0")+"-"+String(tmp.getDate()).padStart(2,"0"); }catch(e){ d=d.substring(0,10); }
-  }
-  if(typeof d === "string" && d.length === 10){
-    try{ var tmp2=new Date(d+"T12:00:00"); d=tmp2.getFullYear()+"-"+String(tmp2.getMonth()+1).padStart(2,"0")+"-"+String(tmp2.getDate()).padStart(2,"0"); }catch(e){}
-  }
-  return d === clef;
-});
+    document.getElementById("met-jourActuelTxt").textContent = clef===clefISO(new Date()) ? "aujourd'hui" : formatDate(jourAffiche);
+    var data = toutesLesDonnees.filter(function(r){ return normaliserDate(r.date) === clef; });
     document.getElementById("met-dashCount").textContent = data.length+(data.length===1?" réponse":" réponses");
 
     var cont = document.getElementById("met-dashContenu");
@@ -649,12 +530,11 @@
     var parNiveau = {1:[],2:[],3:[],4:[],5:[]};
     data.forEach(function(r){ if(parNiveau[r.niveau]) parNiveau[r.niveau].push(r); });
 
-    var dotCouleurs = {1:"var(--n1)",2:"var(--n2)",3:"var(--n3)",4:"var(--n4)",5:"var(--n5)"};
     var html = "";
     [1,2,3,4,5].forEach(function(n){
       if(parNiveau[n].length===0) return;
       var info = NIVEAUX[n];
-      html += '<div class="groupe"><div class="groupe-titre"><span class="dot" style="background:'+dotCouleurs[n]+'"></span>'+info.titre+' ('+parNiveau[n].length+')</div>';
+      html += '<div class="groupe"><div class="groupe-titre"><span class="dot" style="background:'+info.couleur+'"></span>'+info.titre+' ('+parNiveau[n].length+')</div>';
       parNiveau[n].forEach(function(r){
         html += '<div class="joueur-ligne"><span class="em">'+info.emoji+'</span><span class="nom">'+escapeHTML(r.nom)+'</span><span class="heure">'+formatHeure(r.heure)+'</span></div>';
       });
@@ -667,41 +547,28 @@
     var cont = document.getElementById("met-histoContenu");
     if(!nom){ cont.innerHTML=""; return; }
     if(!toutesLesDonnees){ cont.innerHTML='<div class="dash-loading">Chargement…</div>'; return; }
-    var lignes = toutesLesDonnees.filter(function(r){ return r.nom===nom; });
-    lignes.sort(function(a,b){ return a.date<b.date?1:-1; });
+    var lignes = toutesLesDonnees.filter(function(r){ return r.nom===nom && NIVEAUX[r.niveau]; });
     if(lignes.length===0){ cont.innerHTML='<div class="dash-empty">Aucune donnée pour ce joueur.</div>'; return; }
-    var somme=0;
-    lignes.forEach(function(r){ somme+=parseInt(r.niveau,10); });
-    var moy=(somme/lignes.length).toFixed(1);
-    var html='<div class="moyenne-card"><div class="chiffre">'+moy+' / 5</div><div class="label">Niveau moyen de fatigue sur '+lignes.length+' check-ins</div></div>';
+    lignes.sort(function(a,b){ return normaliserDate(a.date) < normaliserDate(b.date) ? 1 : -1; });
+
+    var somme = 0;
+    lignes.forEach(function(r){ somme += parseInt(r.niveau,10); });
+    var html = '<div class="moyenne-card"><div class="chiffre">'+(somme/lignes.length).toFixed(1)+' / 5</div><div class="label">Niveau moyen de fatigue sur '+lignes.length+' check-ins</div></div>';
     lignes.forEach(function(r){
-      var info = NIVEAUX[r.niveau];
-      var d = new Date(r.date+"T12:00:00");
-      html += '<div class="histo-ligne"><span class="em">'+info.emoji+'</span><span class="d">'+formatDate(d)+'</span></div>';
+      var d = new Date(normaliserDate(r.date)+"T12:00:00");
+      html += '<div class="histo-ligne"><span class="em">'+NIVEAUX[r.niveau].emoji+'</span><span class="d">'+formatDate(d)+'</span></div>';
     });
     cont.innerHTML = html;
   }
 
-  function escapeHTML(s){ var d=document.createElement("div");d.textContent=s;return d.innerHTML; }
-
-  // Certaines colonnes "heure" du Google Sheet sont au format Heure seule :
-  // Apps Script les renvoie alors comme une date ancrée au 30/12/1899
-  // (ex. "1899-12-30T09:07:39.000Z"). On ignore cette date fictive et on
-  // ne garde que l'heure, reconvertie dans le fuseau local de l'appareil.
-  function formatHeure(h){
-    if(!h) return "";
-    var d = new Date(h);
-    if(isNaN(d.getTime())) return h;
-    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
-  }
-
 })();
 </script>
-
 </div>
 
+<!-- ===================================================== -->
+<!-- ONGLET 2 : RPE POST-SÉANCE                            -->
+<!-- ===================================================== -->
 <div class="app-panel" id="panelRpe">
-
 <div class="wrap">
 
   <div class="header">
@@ -710,88 +577,49 @@
     <div class="date" id="rpe-dateAffichee"></div>
   </div>
 
-  <!-- BARRE DE PROGRESSION -->
   <div class="barre-progression">
     <span class="prog-label">Joueurs renseignés</span>
     <div class="barre-track"><div class="barre-fill" id="rpe-barreFill" style="width:0%"></div></div>
-    <span class="prog-chiffre" id="rpe-progChiffre">0 / 22</span>
+    <span class="prog-chiffre" id="rpe-progChiffre"></span>
   </div>
 
-  <!-- VUE GRILLE JOUEURS -->
+  <div class="mode-edu-bar" id="rpe-modeEduBar" style="display:none;">
+    <span>🔓 Mode éducateur activé</span>
+    <button id="rpe-btnQuitterEdu">Verrouiller</button>
+  </div>
+
   <div id="rpe-vueGrille">
     <div class="grille-joueurs" id="rpe-grilleJoueurs"></div>
-    <button class="btn-envoyer" id="rpe-btnEnvoyer" disabled>Envoyer les résultats</button>
     <div class="erreur" id="rpe-zoneErreur"></div>
   </div>
 
-  <!-- VUE SELECTION RPE -->
   <div id="rpe-vueRPE">
     <div class="rpe-header">
       <button class="btn-retour" id="rpe-btnRetour">← Retour</button>
       <div class="rpe-joueur-nom" id="rpe-rpeJoueurNom"></div>
     </div>
     <div class="rpe-instruction">Quelle a été l'intensité de la séance ?</div>
-    <div class="rpe-grille-grande" id="rpe-rpeGrille">
-      <div class="rpe-item">
-        <button class="rpe-grand-btn" data-n="1">1</button>
-        <span class="rpe-libelle">Trop facile</span>
-      </div>
-      <div class="rpe-item">
-        <button class="rpe-grand-btn" data-n="2">2</button>
-        <span class="rpe-libelle">Très léger</span>
-      </div>
-      <div class="rpe-item">
-        <button class="rpe-grand-btn" data-n="3">3</button>
-        <span class="rpe-libelle">Léger</span>
-      </div>
-      <div class="rpe-item">
-        <button class="rpe-grand-btn" data-n="4">4</button>
-        <span class="rpe-libelle">Confortable</span>
-      </div>
-      <div class="rpe-item">
-        <button class="rpe-grand-btn" data-n="5">5</button>
-        <span class="rpe-libelle">Équilibré</span>
-      </div>
-      <div class="rpe-item">
-        <button class="rpe-grand-btn" data-n="6">6</button>
-        <span class="rpe-libelle">Chargé</span>
-      </div>
-      <div class="rpe-item">
-        <button class="rpe-grand-btn" data-n="7">7</button>
-        <span class="rpe-libelle">Difficile</span>
-      </div>
-      <div class="rpe-item">
-        <button class="rpe-grand-btn" data-n="8">8</button>
-        <span class="rpe-libelle">Très difficile</span>
-      </div>
-      <div class="rpe-item">
-        <button class="rpe-grand-btn" data-n="9">9</button>
-        <span class="rpe-libelle">Limite — plus rien dans les jambes</span>
-      </div>
-      <div class="rpe-item">
-        <button class="rpe-grand-btn" data-n="10">10</button>
-        <span class="rpe-libelle">Sur les rotules — impossible de continuer</span>
-      </div>
+    <div class="rpe-grille-grande">
+      <div class="rpe-item"><button class="rpe-grand-btn" data-n="1">1</button><span class="rpe-libelle">Trop facile</span></div>
+      <div class="rpe-item"><button class="rpe-grand-btn" data-n="2">2</button><span class="rpe-libelle">Très léger</span></div>
+      <div class="rpe-item"><button class="rpe-grand-btn" data-n="3">3</button><span class="rpe-libelle">Léger</span></div>
+      <div class="rpe-item"><button class="rpe-grand-btn" data-n="4">4</button><span class="rpe-libelle">Confortable</span></div>
+      <div class="rpe-item"><button class="rpe-grand-btn" data-n="5">5</button><span class="rpe-libelle">Équilibré</span></div>
+      <div class="rpe-item"><button class="rpe-grand-btn" data-n="6">6</button><span class="rpe-libelle">Chargé</span></div>
+      <div class="rpe-item"><button class="rpe-grand-btn" data-n="7">7</button><span class="rpe-libelle">Difficile</span></div>
+      <div class="rpe-item"><button class="rpe-grand-btn" data-n="8">8</button><span class="rpe-libelle">Très difficile</span></div>
+      <div class="rpe-item"><button class="rpe-grand-btn" data-n="9">9</button><span class="rpe-libelle">Limite — plus rien dans les jambes</span></div>
+      <div class="rpe-item"><button class="rpe-grand-btn" data-n="10">10</button><span class="rpe-libelle">Sur les rotules — impossible de continuer</span></div>
     </div>
     <div class="rpe-legende"><span>Très facile</span><span>Épuisant</span></div>
   </div>
 
-  <!-- FLASH CONFIRMATION -->
   <div class="flash" id="rpe-flash">
     <div class="flash-nom" id="rpe-flashNom"></div>
     <div class="flash-note" id="rpe-flashNote"></div>
     <div class="flash-label">noté ✓</div>
   </div>
 
-  <!-- VUE ENVOI CONFIRME -->
-  <div id="rpe-vueEnvoi">
-    <span class="grand-emoji">✅</span>
-    <h2>Séance enregistrée !</h2>
-    <p id="rpe-envoiDetail"></p>
-    <button class="btn-reset" id="rpe-btnReset">Nouvelle séance</button>
-  </div>
-
-  <!-- DASHBOARD -->
   <div class="toggle-zone">
     <button class="toggle-btn" id="rpe-btnToggleDash">Voir le tableau de bord coach</button>
   </div>
@@ -807,185 +635,168 @@
     </div>
     <div id="rpe-dashContenu"><div class="dash-loading">Chargement…</div></div>
     <div class="dash-actions">
+      <button id="rpe-btnModeEdu">Mode éducateur</button>
       <button id="rpe-btnRafraichir">Actualiser</button>
     </div>
   </div>
 
   <div class="footer-note">
-    Les données sont envoyées en une seule fois une fois tous les joueurs renseignés.
+    Chaque note est envoyée dès que le joueur répond — chaque joueur ne peut répondre qu'une fois.<br>
+    Modification possible par l'éducateur uniquement.
   </div>
 
 </div>
-
 <script>
 (function(){
 
   var URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxpcsBjwqNDR7LkbT53krZK2d29iQlDzpOUovqD2FCnEGHjENNWE6orj6upb7PtHrLo/exec";
-  var CODE_PIN = "0501";
-  var SESSION_COACH = "rpe_post_coach";
-
-  var EFFECTIF = ["Abdoul Karim","Adam","Bakoutoubo","Bilel","Emir","Ethan","Gabin","Hadi","Issam","Jalil","Kalifa","Keys","Loan","Mathis","Melih","Mickaël","Nourou","Pablo","Sacha","Sarah","Sebastien","Selyan","Yanis"];
+  var SESSION_EDU = "rpe_post_edu_mode";
+  var STORAGE_SAISIES = "rpe_post_saisies_" + clefISO(new Date());
+  var STORAGE_ATTENTE = "rpe_post_attente_" + clefISO(new Date());
   var COULEURS = {1:"#3a9d5a",2:"#5aad6a",3:"#8fc43a",4:"#c4c43a",5:"#d4a82e",6:"#d4841f",7:"#d4611f",8:"#c4391f",9:"#b42515",10:"#8a1010"};
-
-  var moisFr = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
-  var joursFr = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
-  function formatDate(d){ return joursFr[d.getDay()]+" "+d.getDate()+" "+moisFr[d.getMonth()]; }
-  function clefISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 
   document.getElementById("rpe-dateAffichee").textContent = formatDate(new Date());
 
-  // ---------- ÉTAT ----------
-  var saisies = {}; // {nom: rpe}
+  // ---------- ÉTAT (sauvegardé pour la journée) ----------
+  var saisies = lireStockage(STORAGE_SAISIES, {});   // {nom: rpe}
+  var enAttente = lireStockage(STORAGE_ATTENTE, []); // noms dont l'envoi n'a pas encore abouti
   var joueurActif = null;
+  var modeEdu = sessionStorage.getItem(SESSION_EDU) === "1";
+
+  // ---------- MODE ÉDUCATEUR ----------
+  function reglerModeEdu(actif){
+    modeEdu = actif;
+    if(actif) sessionStorage.setItem(SESSION_EDU, "1"); else sessionStorage.removeItem(SESSION_EDU);
+    document.getElementById("rpe-modeEduBar").style.display = actif ? "flex" : "none";
+    construireGrille();
+  }
+  document.getElementById("rpe-btnQuitterEdu").addEventListener("click", function(){ reglerModeEdu(false); });
+  document.getElementById("rpe-btnModeEdu").addEventListener("click", function(){ if(verifierCode()) reglerModeEdu(true); });
 
   // ---------- GRILLE JOUEURS ----------
-  var grilleEl = document.getElementById("rpe-grilleJoueurs");
-
   function construireGrille(){
-    grilleEl.innerHTML = "";
+    var grille = document.getElementById("rpe-grilleJoueurs");
+    grille.innerHTML = "";
+    var nb = Object.keys(saisies).length;
+    document.getElementById("rpe-barreFill").style.width = Math.round(nb/EFFECTIF.length*100)+"%";
+    document.getElementById("rpe-progChiffre").textContent = nb+" / "+EFFECTIF.length;
+
     EFFECTIF.forEach(function(nom){
       var card = document.createElement("div");
       card.className = "joueur-card";
       card.setAttribute("data-nom", nom);
-      var rpe = saisies[nom] || null;
-      if(rpe) card.classList.add("fait");
-      card.innerHTML =
-        '<div class="j-nom">'+nom+'</div>'+
-        '<div class="j-rpe">'+(rpe ? '<span style="color:'+COULEURS[rpe]+'">RPE '+rpe+'</span>' : '')+'</div>'+
-        '<div class="check">✓</div>';
-      card.addEventListener("click", function(){ ouvrirRPE(nom); });
-      grilleEl.appendChild(card);
+      var fait = saisies.hasOwnProperty(nom);
+      var info = "";
+      if(fait){
+        card.classList.add("fait", modeEdu ? "modifiable" : "verrouille");
+        if(modeEdu) info = '<span style="color:'+COULEURS[saisies[nom]]+'">RPE '+saisies[nom]+'</span>'; // note visible seulement pour l'éducateur
+      }
+      card.innerHTML = '<div class="j-nom">'+nom+'</div><div class="j-rpe">'+info+'</div>'+(fait ? '<div class="check">✓</div>' : '');
+      card.addEventListener("click", function(){
+        if(fait && !modeEdu) return; // verrouillé
+        ouvrirRPE(nom);
+      });
+      grille.appendChild(card);
     });
-    mettreAJourBarre();
   }
 
-  function mettreAJourBarre(){
-    var n = Object.keys(saisies).length;
-    var total = EFFECTIF.length;
-    document.getElementById("rpe-barreFill").style.width = Math.round(n/total*100)+"%";
-    document.getElementById("rpe-progChiffre").textContent = n+" / "+total;
-    var btnEnv = document.getElementById("rpe-btnEnvoyer");
-    btnEnv.classList.toggle("visible", n > 0);
-    btnEnv.disabled = false;
-    btnEnv.textContent = n === total ? "Envoyer tout ("+n+" joueurs)" : "Envoyer les "+n+" réponses";
+  // ---------- CHOIX DE LA NOTE ----------
+  function afficherVue(rpe){
+    document.getElementById("rpe-vueGrille").style.display = rpe ? "none" : "block";
+    document.getElementById("rpe-vueRPE").style.display = rpe ? "block" : "none";
   }
-
-  // ---------- VUE RPE ----------
   function ouvrirRPE(nom){
     joueurActif = nom;
     document.getElementById("rpe-rpeJoueurNom").textContent = nom;
-    document.getElementById("rpe-vueGrille").style.display = "none";
-    document.getElementById("rpe-vueRPE").style.display = "block";
+    afficherVue(true);
   }
-
   document.getElementById("rpe-btnRetour").addEventListener("click", function(){
     joueurActif = null;
-    document.getElementById("rpe-vueRPE").style.display = "none";
-    document.getElementById("rpe-vueGrille").style.display = "block";
+    afficherVue(false);
   });
 
-  document.querySelectorAll(".rpe-grand-btn").forEach(function(btn){
+  document.querySelectorAll("#rpe-vueRPE .rpe-grand-btn").forEach(function(btn){
     btn.addEventListener("click", function(){
       if(!joueurActif) return;
       var n = parseInt(btn.getAttribute("data-n"),10);
-      saisies[joueurActif] = n;
+      var nom = joueurActif;
+      saisies[nom] = n;
+      ecrireStockage(STORAGE_SAISIES, saisies);
 
-      // Flash rapide
-      var flash = document.getElementById("rpe-flash");
-      document.getElementById("rpe-flashNom").textContent = joueurActif;
+      // Envoi immédiat
+      mettreEnFile(nom);
+
+      // Flash
+      document.getElementById("rpe-flashNom").textContent = nom;
       document.getElementById("rpe-flashNote").textContent = n;
       document.getElementById("rpe-flashNote").style.color = COULEURS[n];
+      var flash = document.getElementById("rpe-flash");
       flash.classList.add("show");
       setTimeout(function(){
         flash.classList.remove("show");
         joueurActif = null;
-        document.getElementById("rpe-vueRPE").style.display = "none";
-        document.getElementById("rpe-vueGrille").style.display = "block";
+        afficherVue(false);
         construireGrille();
       }, 600);
     });
   });
 
-  construireGrille();
+  // ---------- ENVOI IMMÉDIAT (file d'attente, un envoi à la fois) ----------
+  // Google Apps Script gère mal les écritures simultanées : on envoie un par un.
+  // Un envoi raté (pas de réseau…) reste en attente et repart automatiquement.
+  var envoiEnCours = false;
+  var zoneErreur = document.getElementById("rpe-zoneErreur");
 
-  // ---------- ENVOI GROUPÉ ----------
-  function envoyerUn(nom){
-    return fetch(URL_SCRIPT, {
+  function mettreEnFile(nom){
+    if(enAttente.indexOf(nom) === -1) enAttente.push(nom);
+    ecrireStockage(STORAGE_ATTENTE, enAttente);
+    traiterFile();
+  }
+
+  function traiterFile(){
+    if(envoiEnCours) return;
+    if(enAttente.length === 0){ zoneErreur.style.display = "none"; return; }
+    envoiEnCours = true;
+    var nom = enAttente[0];
+    fetch(URL_SCRIPT, {
       method:"POST",
       headers:{"Content-Type":"text/plain;charset=utf-8"},
       body: JSON.stringify({type:"rpe_post", nom:nom, rpe:saisies[nom]})
-    }).then(function(r){ return r.json(); });
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(){
+        enAttente.shift();
+        ecrireStockage(STORAGE_ATTENTE, enAttente);
+        envoiEnCours = false;
+        setTimeout(traiterFile, 120);
+      })
+      .catch(function(){
+        envoiEnCours = false;
+        zoneErreur.style.display = "block";
+        zoneErreur.textContent = "Envoi en attente pour : "+enAttente.join(", ")+". Nouvel essai automatique… (toucher pour réessayer)";
+        setTimeout(traiterFile, 10000);
+      });
   }
+  zoneErreur.addEventListener("click", traiterFile);
+  window.addEventListener("online", traiterFile);
 
-  function pause(ms){ return new Promise(function(resolve){ setTimeout(resolve, ms); }); }
+  if(modeEdu) document.getElementById("rpe-modeEduBar").style.display = "flex";
+  construireGrille();
+  traiterFile(); // renvoie ce qui serait resté en attente
 
-  document.getElementById("rpe-btnEnvoyer").addEventListener("click", function(){
-    var noms = Object.keys(saisies);
-    if(noms.length === 0) return;
-    var btn = document.getElementById("rpe-btnEnvoyer");
-    btn.disabled = true;
-    document.getElementById("rpe-zoneErreur").style.display = "none";
-
-    // Envoi réellement séquentiel : un joueur à la fois, on attend la réponse
-    // avant de passer au suivant (Google Apps Script gère mal les écritures
-    // simultanées, d'où les échecs silencieux en cas d'envoi groupé en parallèle).
-    var reussis = [];
-    var echecs = [];
-    var i = 0;
-
-    function envoyerSuivant(){
-      if(i >= noms.length){
-        if(echecs.length === 0){
-          var detail = reussis.length+" joueur"+(reussis.length>1?"s":"")+" enregistré"+(reussis.length>1?"s":"")+".";
-          document.getElementById("rpe-envoiDetail").textContent = detail;
-          document.getElementById("rpe-vueGrille").style.display = "none";
-          document.getElementById("rpe-vueEnvoi").style.display = "block";
-          reussis.forEach(function(nom){ delete saisies[nom]; });
-        } else {
-          var msg = reussis.length+"/"+noms.length+" enregistrés. Échec pour : "+echecs.join(", ")+".";
-          document.getElementById("rpe-zoneErreur").style.display = "block";
-          document.getElementById("rpe-zoneErreur").textContent = msg+" Réessayez, seuls les joueurs en échec seront renvoyés.";
-          reussis.forEach(function(nom){ delete saisies[nom]; });
-          construireGrille();
-          btn.disabled = false;
-          mettreAJourBarre();
-        }
-        return;
-      }
-      var nom = noms[i];
-      btn.textContent = "Envoi… ("+(i+1)+"/"+noms.length+")";
-      envoyerUn(nom)
-        .then(function(){ reussis.push(nom); })
-        .catch(function(){ echecs.push(nom); })
-        .then(function(){ i++; return pause(120); })
-        .then(envoyerSuivant);
-    }
-
-    envoyerSuivant();
-  });
-
-  document.getElementById("rpe-btnReset").addEventListener("click", function(){
-    saisies = {};
-    joueurActif = null;
-    document.getElementById("rpe-vueEnvoi").style.display = "none";
-    document.getElementById("rpe-vueGrille").style.display = "block";
-    construireGrille();
-  });
-
-  // ---------- DASHBOARD ----------
+  // ---------- TABLEAU DE BORD ----------
   var dashboard = document.getElementById("rpe-dashboard");
   var btnToggleDash = document.getElementById("rpe-btnToggleDash");
   var toutesLesDonnees = null;
   var jourAffiche = new Date();
 
   btnToggleDash.addEventListener("click", function(){
-    var dejaOuvert = dashboard.classList.contains("show");
-    if(dejaOuvert){ dashboard.classList.remove("show"); btnToggleDash.textContent="Voir le tableau de bord coach"; return; }
-    if(sessionStorage.getItem(SESSION_COACH) !== "1"){
-      var s = prompt("Code coach (4 chiffres) :");
-      if(!s || s.trim() !== CODE_PIN){ alert("Code incorrect."); return; }
-      sessionStorage.setItem(SESSION_COACH,"1");
+    if(dashboard.classList.contains("show")){
+      dashboard.classList.remove("show");
+      btnToggleDash.textContent = "Voir le tableau de bord coach";
+      return;
     }
+    if(!verifierCode()) return;
     dashboard.classList.add("show");
     btnToggleDash.textContent = "Masquer le tableau de bord";
     chargerDonnees();
@@ -1005,60 +816,38 @@
 
   function afficherJour(){
     if(!toutesLesDonnees) return;
-    var estAujourdhui = clefISO(jourAffiche)===clefISO(new Date());
-    document.getElementById("rpe-jourActuelTxt").textContent = estAujourdhui ? "aujourd'hui" : formatDate(new Date(jourAffiche));
     var clef = clefISO(jourAffiche);
-    var data = toutesLesDonnees.filter(function(r){
-      var d = r.date;
-      if(d instanceof Date){
-        d = clefISO(d);
-      } else if(typeof d === "string" && d.length > 10){
-        try{ var tmp=new Date(d); d=tmp.getFullYear()+"-"+String(tmp.getMonth()+1).padStart(2,"0")+"-"+String(tmp.getDate()).padStart(2,"0"); }catch(e){ d=d.substring(0,10); }
-      }
-      if(typeof d === "string" && d.length === 10){
-        try{ var tmp2=new Date(d+"T12:00:00"); d=tmp2.getFullYear()+"-"+String(tmp2.getMonth()+1).padStart(2,"0")+"-"+String(tmp2.getDate()).padStart(2,"0"); }catch(e){}
-      }
-      return d === clef;
-    });
+    document.getElementById("rpe-jourActuelTxt").textContent = clef===clefISO(new Date()) ? "aujourd'hui" : formatDate(jourAffiche);
+    var data = toutesLesDonnees.filter(function(r){ return normaliserDate(r.date) === clef; });
     document.getElementById("rpe-dashCount").textContent = data.length+(data.length===1?" réponse":" réponses");
+
     var cont = document.getElementById("rpe-dashContenu");
     if(data.length===0){ cont.innerHTML='<div class="dash-empty">Aucune note ce jour-là.</div>'; return; }
 
     var somme = 0;
-    data.forEach(function(r){ somme+=parseInt(r.rpe,10); });
-    var moy = (somme/data.length).toFixed(1);
+    data.forEach(function(r){ somme += parseInt(r.rpe,10); });
     var cMoy = COULEURS[Math.round(somme/data.length)];
-
     data.sort(function(a,b){ return parseInt(b.rpe,10)-parseInt(a.rpe,10); });
 
-    var html = '<div class="moyenne-zone"><span class="label">RPE moyen équipe</span><span class="chiffre" style="color:'+cMoy+'">'+moy+' / 10</span></div>';
+    var html = '<div class="moyenne-zone"><span class="label">RPE moyen équipe</span><span class="chiffre" style="color:'+cMoy+'">'+(somme/data.length).toFixed(1)+' / 10</span></div>';
     data.forEach(function(r){
-      var c = COULEURS[parseInt(r.rpe,10)]||"#9aa0ad";
-      html += '<div class="rpe-ligne">';
-      html += '<div class="badge" style="background:'+c+'22;color:'+c+';border:1.5px solid '+c+'">'+r.rpe+'</div>';
-      html += '<span class="nom">'+escapeHTML(r.nom)+'</span>';
-      html += '<span class="heure">'+formatHeure(r.heure)+'</span>';
-      html += '</div>';
+      var c = COULEURS[parseInt(r.rpe,10)] || "#9aa0ad";
+      html += '<div class="rpe-ligne">'
+            +   '<div class="badge" style="background:'+c+'22;color:'+c+';border:1.5px solid '+c+'">'+r.rpe+'</div>'
+            +   '<span class="nom">'+escapeHTML(r.nom)+'</span>'
+            +   '<span class="heure">'+formatHeure(r.heure)+'</span>'
+            + '</div>';
     });
     cont.innerHTML = html;
   }
 
-  function escapeHTML(s){ var d=document.createElement("div");d.textContent=s;return d.innerHTML; }
-
-  // Même correctif que la météo : une colonne "heure" au format Heure seule
-  // revient d'Apps Script ancrée au 30/12/1899. On ne garde que l'heure locale.
-  function formatHeure(h){
-    if(!h) return "";
-    var d = new Date(h);
-    if(isNaN(d.getTime())) return h;
-    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
-  }
-
 })();
 </script>
-
 </div>
 
+<!-- ===================================================== -->
+<!-- BASCULE ENTRE LES ONGLETS                             -->
+<!-- ===================================================== -->
 <script>
 (function(){
   var boutons = document.querySelectorAll(".app-tab");
