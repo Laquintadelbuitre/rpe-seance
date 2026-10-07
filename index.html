@@ -398,7 +398,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, writeBatch, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, getDocs, writeBatch, onSnapshot, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 /* ============ Configuration Firebase (même projet que la planification du voyage) ============ */
 const FIREBASE_CONFIG = {
@@ -444,7 +444,9 @@ const MESSAGES_ERREUR = {
 /* ============ Suivi générique (utilisé par la météo et le RPE) ============
    Firestore : une collection par suivi, un document par joueur et par jour
    (id « AAAA-MM-JJ_Prénom »). Une correction de l'éducateur remplace donc
-   la réponse au lieu de créer un doublon. */
+   la réponse au lieu de créer un doublon.
+   Champ « maj » = heure d'enregistrement donnée par les serveurs Firebase :
+   la copie Google Sheets ne relit que les réponses nouvelles ou modifiées. */
 function creerSuivi(cfg){
   const $ = id => document.getElementById(cfg.p+"-"+id);
   const col = collection(db, cfg.collection);
@@ -514,7 +516,7 @@ function creerSuivi(cfg){
 
       // Enregistrement immédiat (la grille et la jauge se mettent à jour via onSnapshot)
       erreur = "";
-      setDoc(doc(col, aujourdhui+"_"+nom), { date: aujourdhui, nom: nom, [cfg.champ]: n, heure: heureHM(maintenant), at: maintenant.getTime() })
+      setDoc(doc(col, aujourdhui+"_"+nom), { date: aujourdhui, nom: nom, [cfg.champ]: n, heure: heureHM(maintenant), at: maintenant.getTime(), maj: serverTimestamp() })
         .catch(e => { erreur = MESSAGES_ERREUR[e.code] || "Échec de l'enregistrement : "+e.message; afficherEtat(0); });
 
       cfg.remplirFlash(nom, n);
@@ -541,9 +543,10 @@ function creerSuivi(cfg){
   construireGrille(); // affichage immédiat, complété dès que Firebase répond
 
   // ---------- Tableau de bord (mis à jour en direct) ----------
+  // On n'écoute que le jour affiché : Firebase ne lit que ces quelques réponses,
+  // pas toute la saison (quota gratuit : 50 000 lectures par jour).
   const dashboard = $("dashboard");
   const btnToggle = $("btnToggleDash");
-  let toutesLesDonnees = null;
   let arreterEcoute = null;
   const jourAffiche = new Date();
 
@@ -557,42 +560,41 @@ function creerSuivi(cfg){
     if(!verifierCode()) return;
     dashboard.classList.add("show");
     btnToggle.textContent = "Masquer le tableau de bord";
-    arreterEcoute = onSnapshot(col, snap => {
-      toutesLesDonnees = snap.docs.map(d => d.data());
-      afficherJour();
-      if(cfg.surDonnees) cfg.surDonnees(toutesLesDonnees);
-    }, () => { $("dashContenu").innerHTML = '<div class="dash-empty">Impossible de charger.</div>'; });
+    ecouterJour();
   });
 
-  $("jourPrecedent").addEventListener("click", () => { jourAffiche.setDate(jourAffiche.getDate()-1); afficherJour(); });
-  $("jourSuivant").addEventListener("click", () => { jourAffiche.setDate(jourAffiche.getDate()+1); afficherJour(); });
+  $("jourPrecedent").addEventListener("click", () => { jourAffiche.setDate(jourAffiche.getDate()-1); ecouterJour(); });
+  $("jourSuivant").addEventListener("click", () => { jourAffiche.setDate(jourAffiche.getDate()+1); ecouterJour(); });
 
-  function afficherJour(){
-    if(!toutesLesDonnees) return;
+  function ecouterJour(){
+    if(arreterEcoute) arreterEcoute();
     const clef = clefISO(jourAffiche);
     $("jourActuel").textContent = clef === aujourdhui ? "aujourd'hui" : formatDate(jourAffiche);
-    const data = toutesLesDonnees.filter(r => r.date === clef);
-    $("dashCount").textContent = data.length+(data.length === 1 ? " réponse" : " réponses");
-    const cont = $("dashContenu");
-    if(data.length === 0){ cont.innerHTML = '<div class="dash-empty">'+cfg.videJour+'</div>'; return; }
-    cont.innerHTML = cfg.rendreJour(data);
+    $("dashCount").textContent = "—";
+    $("dashContenu").innerHTML = '<div class="dash-loading">Chargement…</div>';
+    arreterEcoute = onSnapshot(query(col, where("date", "==", clef)), snap => {
+      const data = snap.docs.map(d => d.data());
+      $("dashCount").textContent = data.length+(data.length === 1 ? " réponse" : " réponses");
+      $("dashContenu").innerHTML = data.length ? cfg.rendreJour(data) : '<div class="dash-empty">'+cfg.videJour+'</div>';
+    }, () => { $("dashContenu").innerHTML = '<div class="dash-empty">Impossible de charger.</div>'; });
   }
 
   // ---------- Import unique de l'ancien Google Sheet ----------
   // À utiliser une seule fois par onglet ; ce bouton (et urlAncienne) pourra ensuite être supprimé.
   $("btnImport").addEventListener("click", () => {
-    if(!toutesLesDonnees || !confirm("Copier dans Firebase les réponses enregistrées dans l'ancien Google Sheet ?")) return;
+    if(!confirm("Copier dans Firebase les réponses enregistrées dans l'ancien Google Sheet ?")) return;
     const btn = $("btnImport");
     btn.disabled = true; btn.textContent = "Import en cours…";
-    const deja = new Set(toutesLesDonnees.map(r => r.date+"_"+r.nom));
-    fetch(cfg.urlAncienne)
+    let deja;
+    getDocs(col) // lecture complète, une seule fois, pour ne pas écraser les réponses déjà dans Firebase
+      .then(snap => { deja = new Set(snap.docs.map(d => d.id)); return fetch(cfg.urlAncienne); })
       .then(r => r.json())
       .then(lignes => {
         const docs = {}; // le dernier envoi d'un joueur pour une date l'emporte (corrections)
         lignes.forEach(r => {
           const date = dateSheet(r.date), n = parseInt(r[cfg.champ], 10);
           if(!date || !r.nom || !n || deja.has(date+"_"+r.nom)) return;
-          docs[date+"_"+r.nom] = { date: date, nom: String(r.nom), [cfg.champ]: n, heure: heureSheet(r.heure), at: Date.parse(date+"T12:00:00") };
+          docs[date+"_"+r.nom] = { date: date, nom: String(r.nom), [cfg.champ]: n, heure: heureSheet(r.heure), at: Date.parse(date+"T12:00:00"), maj: serverTimestamp() };
         });
         const ids = Object.keys(docs);
         const lots = [];
@@ -606,6 +608,8 @@ function creerSuivi(cfg){
       .then(n => { btn.textContent = n+" réponse"+(n>1?"s":"")+" importée"+(n>1?"s":""); })
       .catch(e => { btn.disabled = false; btn.textContent = "Échec de l'import — réessayer"; console.error(e); });
   });
+
+  return col;
 }
 
 // Formats renvoyés par l'ancien Apps Script (utilisés seulement par l'import)
@@ -629,9 +633,7 @@ const NIVEAUX = {
   5:{emoji:"⬛", titre:"Épuisé / Douleur", couleur:"var(--n5)"}
 };
 const selHisto = document.getElementById("met-selectHisto");
-let donneesMeteo = null;
-
-creerSuivi({
+const colMeteo = creerSuivi({
   p: "met",
   collection: "u13_meteo",
   champ: "niveau",
@@ -655,8 +657,7 @@ creerSuivi({
       html += '</div>';
     });
     return html;
-  },
-  surDonnees: data => { donneesMeteo = data; afficherHistorique(selHisto.value); }
+  }
 });
 
 // Onglets « Vue du jour » / « Historique joueur »
@@ -673,18 +674,23 @@ document.querySelectorAll("#met-dashboard .dash-tab").forEach(tab => {
 EFFECTIF.forEach(nom => { const o = document.createElement("option"); o.value = nom; o.textContent = nom; selHisto.appendChild(o); });
 selHisto.addEventListener("change", () => afficherHistorique(selHisto.value));
 
+// Historique : on ne lit que les réponses du joueur choisi
+let arreterHisto = null;
 function afficherHistorique(nom){
   const cont = document.getElementById("met-histoContenu");
+  if(arreterHisto){ arreterHisto(); arreterHisto = null; }
   if(!nom){ cont.innerHTML = ""; return; }
-  if(!donneesMeteo){ cont.innerHTML = '<div class="dash-loading">Chargement…</div>'; return; }
-  const lignes = donneesMeteo.filter(r => r.nom === nom && NIVEAUX[r.niveau]).sort((a,b) => a.date < b.date ? 1 : -1);
-  if(lignes.length === 0){ cont.innerHTML = '<div class="dash-empty">Aucune donnée pour ce joueur.</div>'; return; }
-  const moyenne = lignes.reduce((s,r) => s + r.niveau, 0) / lignes.length;
-  let html = '<div class="moyenne-card"><div class="chiffre">'+moyenne.toFixed(1)+' / 5</div><div class="label">Niveau moyen de fatigue sur '+lignes.length+' check-ins</div></div>';
-  lignes.forEach(r => {
-    html += '<div class="histo-ligne"><span class="em">'+NIVEAUX[r.niveau].emoji+'</span><span class="d">'+formatDate(new Date(r.date+"T12:00:00"))+'</span></div>';
-  });
-  cont.innerHTML = html;
+  cont.innerHTML = '<div class="dash-loading">Chargement…</div>';
+  arreterHisto = onSnapshot(query(colMeteo, where("nom", "==", nom)), snap => {
+    const lignes = snap.docs.map(d => d.data()).filter(r => NIVEAUX[r.niveau]).sort((a,b) => a.date < b.date ? 1 : -1);
+    if(lignes.length === 0){ cont.innerHTML = '<div class="dash-empty">Aucune donnée pour ce joueur.</div>'; return; }
+    const moyenne = lignes.reduce((s,r) => s + r.niveau, 0) / lignes.length;
+    let html = '<div class="moyenne-card"><div class="chiffre">'+moyenne.toFixed(1)+' / 5</div><div class="label">Niveau moyen de fatigue sur '+lignes.length+' check-ins</div></div>';
+    lignes.forEach(r => {
+      html += '<div class="histo-ligne"><span class="em">'+NIVEAUX[r.niveau].emoji+'</span><span class="d">'+formatDate(new Date(r.date+"T12:00:00"))+'</span></div>';
+    });
+    cont.innerHTML = html;
+  }, () => { cont.innerHTML = '<div class="dash-empty">Impossible de charger.</div>'; });
 }
 
 /* ============ ONGLET 2 : RPE POST-SÉANCE ============ */
