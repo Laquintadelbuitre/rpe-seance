@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Suivi U13 — Limoges Football</title>
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js">
 <style>
   :root{
     --fond:#0f1115;
@@ -71,17 +74,16 @@
   .joueur-card:active:not(.verrouille){transform:scale(0.95);}
   .joueur-card .j-nom{font-size:13.5px;font-weight:700;line-height:1.2;}
   .joueur-card .j-info{font-size:12px;margin-top:4px;height:18px;}
-  .joueur-card .j-rpe{font-size:11px;color:var(--texte-att);margin-top:4px;height:16px;}
   .joueur-card .check{position:absolute;top:6px;right:8px;font-size:11px;width:18px;height:18px;border-radius:50%;background:var(--vert);display:none;align-items:center;justify-content:center;color:#fff;font-weight:700;}
   .joueur-card.fait{border-color:var(--vert);cursor:default;}
   .joueur-card.fait .check{display:flex;}
   .joueur-card.verrouille{opacity:.5;cursor:not-allowed;}
   .joueur-card.modifiable{border-color:var(--bleu);cursor:pointer;}
 
+  .vue-choix{display:none;}
   .btn-retour{background:var(--panneau-clair);border:1px solid var(--ligne);color:var(--texte);padding:9px 14px;border-radius:10px;font-size:13px;cursor:pointer;flex-shrink:0;}
 
   /* ===== MÉTÉO : CHOIX DU NIVEAU ===== */
-  #met-vueNiveaux{display:none;}
   .niveaux-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
   .niveaux-nom{font-size:20px;font-weight:800;}
   .niveaux-liste{display:flex;flex-direction:column;gap:10px;}
@@ -103,7 +105,6 @@
   .niveau-btn.n5 .pastille{background:rgba(255,255,255,.06);}
 
   /* ===== RPE : CHOIX DE LA NOTE ===== */
-  #rpe-vueRPE{display:none;}
   .rpe-header{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
   .rpe-joueur-nom{font-size:20px;font-weight:800;}
   .rpe-instruction{font-size:13px;color:var(--texte-att);margin-bottom:14px;text-align:center;}
@@ -140,10 +141,9 @@
   .rpe-grand-btn[data-n="10"]:active{background:rgba(138,16,16,.3);}
   .rpe-legende{display:flex;justify-content:space-between;font-size:11px;color:var(--texte-att);margin-bottom:16px;}
 
-  .erreur{
-    display:none;background:rgba(196,57,47,.12);border:1px solid rgba(196,57,47,.4);
-    color:#e8a39d;font-size:13px;padding:12px 14px;border-radius:12px;margin-top:12px;cursor:pointer;
-  }
+  /* Bandeau d'état des envois */
+  .etat{display:none;background:rgba(212,168,46,.1);border:1px solid rgba(212,168,46,.35);color:#e6c97a;font-size:13px;padding:12px 14px;border-radius:12px;margin-top:12px;}
+  .etat.erreur{background:rgba(196,57,47,.12);border-color:rgba(196,57,47,.4);color:#e8a39d;}
 
   /* ===== FLASH DE CONFIRMATION ===== */
   .flash{display:none;position:fixed;top:0;left:0;right:0;bottom:0;align-items:center;justify-content:center;flex-direction:column;background:rgba(15,17,21,.92);z-index:100;}
@@ -213,57 +213,6 @@
 </div>
 
 <!-- ===================================================== -->
-<!-- OUTILS COMMUNS AUX DEUX ONGLETS                       -->
-<!-- ===================================================== -->
-<script>
-  // Effectif : à modifier ici uniquement (sert aux deux onglets)
-  var EFFECTIF = ["Abdoul Karim","Adam","Bakoutoubo","Bilel","Emir","Ethan","Gabin","Hadi","Issam","Jalil","Kalifa","Keys","Loan","Mathis","Melih","Mickaël","Nourou","Pablo","Sacha","Sarah","Sebastien","Selyan","Yanis"];
-  var CODE_PIN = "0501";
-  var SESSION_COACH = "u13_coach_session"; // code saisi une fois = valable pour les deux onglets
-
-  var moisFr = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
-  var joursFr = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
-  function formatDate(d){ return joursFr[d.getDay()]+" "+d.getDate()+" "+moisFr[d.getMonth()]; }
-  function clefISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
-
-  // Date renvoyée par Apps Script ("2026-09-24" ou "2026-09-23T22:00:00.000Z")
-  // → clé "AAAA-MM-JJ" dans le fuseau local de l'appareil.
-  function normaliserDate(d){
-    if(typeof d !== "string") return "";
-    if(d.length > 10){ var t = new Date(d); return isNaN(t.getTime()) ? d.substring(0,10) : clefISO(t); }
-    return d;
-  }
-
-  // Une colonne "heure" au format Heure seule revient d'Apps Script ancrée
-  // au 30/12/1899 (ex. "1899-12-30T09:07:39.000Z") : on ne garde que l'heure locale.
-  function formatHeure(h){
-    if(!h) return "";
-    var d = new Date(h);
-    if(isNaN(d.getTime())) return h;
-    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
-  }
-
-  function escapeHTML(s){ var d=document.createElement("div");d.textContent=s;return d.innerHTML; }
-
-  // Demande le code coach si pas encore saisi pendant cette session
-  function verifierCode(){
-    if(sessionStorage.getItem(SESSION_COACH) === "1") return true;
-    var s = prompt("Code éducateur (4 chiffres) :");
-    if(!s || s.trim() !== CODE_PIN){ alert("Code incorrect."); return false; }
-    sessionStorage.setItem(SESSION_COACH,"1");
-    return true;
-  }
-
-  function lireStockage(clef, defaut){
-    try{ var raw = localStorage.getItem(clef); if(raw) return JSON.parse(raw); }catch(e){}
-    return defaut;
-  }
-  function ecrireStockage(clef, valeur){
-    try{ localStorage.setItem(clef, JSON.stringify(valeur)); }catch(e){}
-  }
-</script>
-
-<!-- ===================================================== -->
 <!-- ONGLET 1 : MÉTÉO DU JOUR                              -->
 <!-- ===================================================== -->
 <div class="app-panel active" id="panelMeteo">
@@ -272,7 +221,7 @@
   <div class="header">
     <span class="tag">Avant séance · U13 Limoges Football</span>
     <h1>Météo du jour</h1>
-    <div class="date" id="met-dateAffichee"></div>
+    <div class="date" id="met-date"></div>
   </div>
 
   <div class="barre-progression">
@@ -287,13 +236,14 @@
   </div>
 
   <div id="met-vueGrille">
-    <div class="grille-joueurs" id="met-grilleJoueurs"></div>
+    <div class="grille-joueurs" id="met-grille"></div>
+    <div class="etat" id="met-etat"></div>
   </div>
 
-  <div id="met-vueNiveaux">
+  <div class="vue-choix" id="met-vueChoix">
     <div class="niveaux-header">
       <button class="btn-retour" id="met-btnRetour">← Retour</button>
-      <div class="niveaux-nom" id="met-niveauxNom"></div>
+      <div class="niveaux-nom" id="met-choixNom"></div>
     </div>
     <div class="niveaux-liste">
       <button class="niveau-btn n1" data-n="1">
@@ -340,21 +290,21 @@
     <div id="met-vueJour">
       <div class="nav-jour">
         <button id="met-jourPrecedent">‹</button>
-        <div class="jour-actuel" id="met-jourActuelTxt">aujourd'hui</div>
+        <div class="jour-actuel" id="met-jourActuel">aujourd'hui</div>
         <button id="met-jourSuivant">›</button>
       </div>
       <div class="dash-head"><h2>Check-ins</h2><span class="count" id="met-dashCount">—</span></div>
       <div id="met-dashContenu"><div class="dash-loading">Chargement…</div></div>
     </div>
     <div id="met-vueHistorique" style="display:none;">
-      <select class="select-histo" id="met-selectHistoJoueur">
+      <select class="select-histo" id="met-selectHisto">
         <option value="">— Choisir un joueur —</option>
       </select>
       <div id="met-histoContenu"></div>
     </div>
     <div class="dash-actions">
       <button id="met-btnModeEdu">Mode éducateur</button>
-      <button id="met-btnRafraichir">Actualiser</button>
+      <button id="met-btnImport">Importer l'historique Google Sheet</button>
     </div>
   </div>
 
@@ -364,205 +314,6 @@
   </div>
 
 </div>
-<script>
-(function(){
-
-  var URL_SCRIPT = "https://script.google.com/macros/s/AKfycbw9ychbh5oSoc-k22FnT7mmCf04684C2hJmllRDATvNQR37I_Udwpn3mHTAVvA3af9cRQ/exec";
-  var SESSION_EDU = "meteo_edu_mode";
-  var STORAGE_SAISIES = "meteo_saisies_" + clefISO(new Date());
-
-  var NIVEAUX = {
-    1:{emoji:"🟩", titre:"Pleine forme !",   couleur:"var(--n1)"},
-    2:{emoji:"🟨", titre:"Un peu lourd",     couleur:"var(--n2)"},
-    3:{emoji:"🟧", titre:"Fatigué",          couleur:"var(--n3)"},
-    4:{emoji:"🟥", titre:"Très fatigué",     couleur:"var(--n4)"},
-    5:{emoji:"⬛", titre:"Épuisé / Douleur", couleur:"var(--n5)"}
-  };
-
-  document.getElementById("met-dateAffichee").textContent = formatDate(new Date());
-
-  // ---------- ÉTAT (sauvegardé pour la journée) ----------
-  var saisies = lireStockage(STORAGE_SAISIES, {}); // {nom: niveau}
-  var joueurActif = null;
-  var modeEdu = sessionStorage.getItem(SESSION_EDU) === "1";
-
-  // ---------- MODE ÉDUCATEUR ----------
-  function reglerModeEdu(actif){
-    modeEdu = actif;
-    if(actif) sessionStorage.setItem(SESSION_EDU, "1"); else sessionStorage.removeItem(SESSION_EDU);
-    document.getElementById("met-modeEduBar").style.display = actif ? "flex" : "none";
-    construireGrille();
-  }
-  document.getElementById("met-btnQuitterEdu").addEventListener("click", function(){ reglerModeEdu(false); });
-  document.getElementById("met-btnModeEdu").addEventListener("click", function(){ if(verifierCode()) reglerModeEdu(true); });
-
-  // ---------- GRILLE JOUEURS ----------
-  function construireGrille(){
-    var grille = document.getElementById("met-grilleJoueurs");
-    grille.innerHTML = "";
-    var nb = Object.keys(saisies).length;
-    document.getElementById("met-barreFill").style.width = Math.round(nb/EFFECTIF.length*100)+"%";
-    document.getElementById("met-progChiffre").textContent = nb+" / "+EFFECTIF.length;
-
-    EFFECTIF.forEach(function(nom){
-      var card = document.createElement("div");
-      card.className = "joueur-card";
-      var fait = saisies.hasOwnProperty(nom);
-      var info = "";
-      if(fait){
-        card.classList.add("fait", modeEdu ? "modifiable" : "verrouille");
-        if(modeEdu) info = NIVEAUX[saisies[nom]].emoji; // réponse visible seulement pour l'éducateur
-      }
-      card.innerHTML = '<div class="j-nom">'+nom+'</div><div class="j-info">'+info+'</div>'+(fait ? '<div class="check">✓</div>' : '');
-      card.addEventListener("click", function(){
-        if(fait && !modeEdu) return; // verrouillé
-        ouvrirNiveaux(nom);
-      });
-      grille.appendChild(card);
-    });
-  }
-
-  // ---------- CHOIX DU NIVEAU ----------
-  function afficherVue(niveaux){
-    document.getElementById("met-vueGrille").style.display = niveaux ? "none" : "block";
-    document.getElementById("met-vueNiveaux").style.display = niveaux ? "block" : "none";
-  }
-  function ouvrirNiveaux(nom){
-    joueurActif = nom;
-    document.getElementById("met-niveauxNom").textContent = nom;
-    afficherVue(true);
-  }
-  document.getElementById("met-btnRetour").addEventListener("click", function(){
-    joueurActif = null;
-    afficherVue(false);
-  });
-
-  document.querySelectorAll("#met-vueNiveaux .niveau-btn").forEach(function(btn){
-    btn.addEventListener("click", function(){
-      if(!joueurActif) return;
-      var n = parseInt(btn.getAttribute("data-n"),10);
-      var nom = joueurActif;
-      saisies[nom] = n;
-      ecrireStockage(STORAGE_SAISIES, saisies);
-
-      // Envoi immédiat
-      fetch(URL_SCRIPT, {
-        method:"POST",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({nom:nom, niveau:n})
-      }).catch(function(){});
-
-      // Flash
-      document.getElementById("met-flashEmoji").textContent = NIVEAUX[n].emoji;
-      document.getElementById("met-flashNom").textContent = nom;
-      var flash = document.getElementById("met-flash");
-      flash.classList.add("show");
-      setTimeout(function(){
-        flash.classList.remove("show");
-        joueurActif = null;
-        afficherVue(false);
-        construireGrille();
-      }, 600);
-    });
-  });
-
-  if(modeEdu) document.getElementById("met-modeEduBar").style.display = "flex";
-  construireGrille();
-
-  // ---------- TABLEAU DE BORD ----------
-  var dashboard = document.getElementById("met-dashboard");
-  var btnToggleDash = document.getElementById("met-btnToggleDash");
-  var toutesLesDonnees = null;
-  var jourAffiche = new Date();
-
-  btnToggleDash.addEventListener("click", function(){
-    if(dashboard.classList.contains("show")){
-      dashboard.classList.remove("show");
-      btnToggleDash.textContent = "Voir le tableau de bord coach";
-      return;
-    }
-    if(!verifierCode()) return;
-    dashboard.classList.add("show");
-    btnToggleDash.textContent = "Masquer le tableau de bord";
-    chargerDonnees();
-  });
-
-  document.querySelectorAll("#met-dashboard .dash-tab").forEach(function(tab){
-    tab.addEventListener("click", function(){
-      document.querySelectorAll("#met-dashboard .dash-tab").forEach(function(t){ t.classList.remove("active"); });
-      tab.classList.add("active");
-      var onglet = tab.getAttribute("data-onglet");
-      document.getElementById("met-vueJour").style.display = onglet==="jour" ? "block" : "none";
-      document.getElementById("met-vueHistorique").style.display = onglet==="historique" ? "block" : "none";
-    });
-  });
-
-  document.getElementById("met-btnRafraichir").addEventListener("click", chargerDonnees);
-  document.getElementById("met-jourPrecedent").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()-1); afficherJour(); });
-  document.getElementById("met-jourSuivant").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()+1); afficherJour(); });
-
-  var selHisto = document.getElementById("met-selectHistoJoueur");
-  EFFECTIF.forEach(function(nom){ var o=document.createElement("option"); o.value=nom; o.textContent=nom; selHisto.appendChild(o); });
-  selHisto.addEventListener("change", function(){ afficherHistorique(this.value); });
-
-  function chargerDonnees(){
-    document.getElementById("met-dashContenu").innerHTML = '<div class="dash-loading">Chargement…</div>';
-    fetch(URL_SCRIPT)
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        toutesLesDonnees = d;
-        afficherJour();
-        afficherHistorique(selHisto.value);
-      })
-      .catch(function(){ document.getElementById("met-dashContenu").innerHTML='<div class="dash-empty">Impossible de charger.</div>'; });
-  }
-
-  function afficherJour(){
-    if(!toutesLesDonnees) return;
-    var clef = clefISO(jourAffiche);
-    document.getElementById("met-jourActuelTxt").textContent = clef===clefISO(new Date()) ? "aujourd'hui" : formatDate(jourAffiche);
-    var data = toutesLesDonnees.filter(function(r){ return normaliserDate(r.date) === clef; });
-    document.getElementById("met-dashCount").textContent = data.length+(data.length===1?" réponse":" réponses");
-
-    var cont = document.getElementById("met-dashContenu");
-    if(data.length===0){ cont.innerHTML='<div class="dash-empty">Aucun check-in ce jour-là.</div>'; return; }
-
-    var parNiveau = {1:[],2:[],3:[],4:[],5:[]};
-    data.forEach(function(r){ if(parNiveau[r.niveau]) parNiveau[r.niveau].push(r); });
-
-    var html = "";
-    [1,2,3,4,5].forEach(function(n){
-      if(parNiveau[n].length===0) return;
-      var info = NIVEAUX[n];
-      html += '<div class="groupe"><div class="groupe-titre"><span class="dot" style="background:'+info.couleur+'"></span>'+info.titre+' ('+parNiveau[n].length+')</div>';
-      parNiveau[n].forEach(function(r){
-        html += '<div class="joueur-ligne"><span class="em">'+info.emoji+'</span><span class="nom">'+escapeHTML(r.nom)+'</span><span class="heure">'+formatHeure(r.heure)+'</span></div>';
-      });
-      html += '</div>';
-    });
-    cont.innerHTML = html;
-  }
-
-  function afficherHistorique(nom){
-    var cont = document.getElementById("met-histoContenu");
-    if(!nom){ cont.innerHTML=""; return; }
-    if(!toutesLesDonnees){ cont.innerHTML='<div class="dash-loading">Chargement…</div>'; return; }
-    var lignes = toutesLesDonnees.filter(function(r){ return r.nom===nom && NIVEAUX[r.niveau]; });
-    if(lignes.length===0){ cont.innerHTML='<div class="dash-empty">Aucune donnée pour ce joueur.</div>'; return; }
-    lignes.sort(function(a,b){ return normaliserDate(a.date) < normaliserDate(b.date) ? 1 : -1; });
-
-    var somme = 0;
-    lignes.forEach(function(r){ somme += parseInt(r.niveau,10); });
-    var html = '<div class="moyenne-card"><div class="chiffre">'+(somme/lignes.length).toFixed(1)+' / 5</div><div class="label">Niveau moyen de fatigue sur '+lignes.length+' check-ins</div></div>';
-    lignes.forEach(function(r){
-      var d = new Date(normaliserDate(r.date)+"T12:00:00");
-      html += '<div class="histo-ligne"><span class="em">'+NIVEAUX[r.niveau].emoji+'</span><span class="d">'+formatDate(d)+'</span></div>';
-    });
-    cont.innerHTML = html;
-  }
-
-})();
-</script>
 </div>
 
 <!-- ===================================================== -->
@@ -574,7 +325,7 @@
   <div class="header">
     <span class="tag">Fin de séance · U13 Limoges Football</span>
     <h1>RPE Post-séance</h1>
-    <div class="date" id="rpe-dateAffichee"></div>
+    <div class="date" id="rpe-date"></div>
   </div>
 
   <div class="barre-progression">
@@ -589,14 +340,14 @@
   </div>
 
   <div id="rpe-vueGrille">
-    <div class="grille-joueurs" id="rpe-grilleJoueurs"></div>
-    <div class="erreur" id="rpe-zoneErreur"></div>
+    <div class="grille-joueurs" id="rpe-grille"></div>
+    <div class="etat" id="rpe-etat"></div>
   </div>
 
-  <div id="rpe-vueRPE">
+  <div class="vue-choix" id="rpe-vueChoix">
     <div class="rpe-header">
       <button class="btn-retour" id="rpe-btnRetour">← Retour</button>
-      <div class="rpe-joueur-nom" id="rpe-rpeJoueurNom"></div>
+      <div class="rpe-joueur-nom" id="rpe-choixNom"></div>
     </div>
     <div class="rpe-instruction">Quelle a été l'intensité de la séance ?</div>
     <div class="rpe-grille-grande">
@@ -626,240 +377,357 @@
   <div class="dashboard" id="rpe-dashboard">
     <div class="nav-jour">
       <button id="rpe-jourPrecedent">‹</button>
-      <div class="jour-actuel" id="rpe-jourActuelTxt">aujourd'hui</div>
+      <div class="jour-actuel" id="rpe-jourActuel">aujourd'hui</div>
       <button id="rpe-jourSuivant">›</button>
     </div>
-    <div class="dash-head">
-      <h2>RPE post-séance</h2>
-      <span class="count" id="rpe-dashCount">—</span>
-    </div>
+    <div class="dash-head"><h2>RPE post-séance</h2><span class="count" id="rpe-dashCount">—</span></div>
     <div id="rpe-dashContenu"><div class="dash-loading">Chargement…</div></div>
     <div class="dash-actions">
       <button id="rpe-btnModeEdu">Mode éducateur</button>
-      <button id="rpe-btnRafraichir">Actualiser</button>
+      <button id="rpe-btnImport">Importer l'historique Google Sheet</button>
     </div>
   </div>
 
   <div class="footer-note">
-    Chaque note est envoyée dès que le joueur répond — chaque joueur ne peut répondre qu'une fois.<br>
+    Chaque note est enregistrée dès que le joueur répond — chaque joueur ne peut répondre qu'une fois.<br>
     Modification possible par l'éducateur uniquement.
   </div>
 
 </div>
-<script>
-(function(){
+</div>
 
-  var URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxpcsBjwqNDR7LkbT53krZK2d29iQlDzpOUovqD2FCnEGHjENNWE6orj6upb7PtHrLo/exec";
-  var SESSION_EDU = "rpe_post_edu_mode";
-  var STORAGE_SAISIES = "rpe_post_saisies_" + clefISO(new Date());
-  var STORAGE_ATTENTE = "rpe_post_attente_" + clefISO(new Date());
-  var COULEURS = {1:"#3a9d5a",2:"#5aad6a",3:"#8fc43a",4:"#c4c43a",5:"#d4a82e",6:"#d4841f",7:"#d4611f",8:"#c4391f",9:"#b42515",10:"#8a1010"};
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, writeBatch, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-  document.getElementById("rpe-dateAffichee").textContent = formatDate(new Date());
+/* ============ Configuration Firebase (même projet que la planification du voyage) ============ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDuELMBbYAFwTFddYja881mUUqYUwePJms",
+  authDomain: "tableaux-669a4.firebaseapp.com",
+  projectId: "tableaux-669a4",
+  storageBucket: "tableaux-669a4.firebasestorage.app",
+  messagingSenderId: "72183332124",
+  appId: "1:72183332124:web:68c1b3356704b518090ed9"
+};
+// Cache local : les réponses saisies sans réseau sont gardées sur l'appareil
+// (même après rechargement) et envoyées automatiquement au retour de la connexion.
+const db = initializeFirestore(initializeApp(FIREBASE_CONFIG), {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
 
-  // ---------- ÉTAT (sauvegardé pour la journée) ----------
-  var saisies = lireStockage(STORAGE_SAISIES, {});   // {nom: rpe}
-  var enAttente = lireStockage(STORAGE_ATTENTE, []); // noms dont l'envoi n'a pas encore abouti
-  var joueurActif = null;
-  var modeEdu = sessionStorage.getItem(SESSION_EDU) === "1";
+/* ============ Réglages communs ============ */
+// Effectif : à modifier ici uniquement (sert aux deux onglets)
+const EFFECTIF = ["Abdoul Karim","Adam","Bakoutoubo","Bilel","Emir","Ethan","Gabin","Hadi","Issam","Jalil","Kalifa","Keys","Loan","Mathis","Melih","Mickaël","Nourou","Pablo","Sacha","Sarah","Sebastien","Selyan","Yanis"];
+const CODE_PIN = "0501";
+const SESSION_COACH = "u13_coach_session"; // code saisi une fois = valable pour les deux onglets
 
-  // ---------- MODE ÉDUCATEUR ----------
-  function reglerModeEdu(actif){
-    modeEdu = actif;
-    if(actif) sessionStorage.setItem(SESSION_EDU, "1"); else sessionStorage.removeItem(SESSION_EDU);
-    document.getElementById("rpe-modeEduBar").style.display = actif ? "flex" : "none";
+const moisFr = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+const joursFr = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+const formatDate = d => joursFr[d.getDay()]+" "+d.getDate()+" "+moisFr[d.getMonth()];
+const clefISO = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const heureHM = d => String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+const escapeHTML = s => { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; };
+
+function verifierCode(){
+  if(sessionStorage.getItem(SESSION_COACH) === "1") return true;
+  const s = prompt("Code éducateur (4 chiffres) :");
+  if(!s || s.trim() !== CODE_PIN){ alert("Code incorrect."); return false; }
+  sessionStorage.setItem(SESSION_COACH, "1");
+  return true;
+}
+
+const MESSAGES_ERREUR = {
+  "permission-denied": "Firebase refuse l'enregistrement : vérifiez les règles de sécurité Firestore.",
+  "resource-exhausted": "Quota gratuit Firebase atteint pour aujourd'hui."
+};
+
+/* ============ Suivi générique (utilisé par la météo et le RPE) ============
+   Firestore : une collection par suivi, un document par joueur et par jour
+   (id « AAAA-MM-JJ_Prénom »). Une correction de l'éducateur remplace donc
+   la réponse au lieu de créer un doublon. */
+function creerSuivi(cfg){
+  const $ = id => document.getElementById(cfg.p+"-"+id);
+  const col = collection(db, cfg.collection);
+  const aujourdhui = clefISO(new Date());
+  const sessionEdu = cfg.p+"_edu_mode";
+  let saisies = {};       // {nom: valeur} pour aujourd'hui
+  let joueurActif = null;
+  let modeEdu = sessionStorage.getItem(sessionEdu) === "1";
+  let erreur = "";
+
+  $("date").textContent = formatDate(new Date());
+
+  // ---------- Réponses du jour, en direct ----------
+  onSnapshot(query(col, where("date", "==", aujourdhui)), { includeMetadataChanges: true }, snap => {
+    saisies = {};
+    snap.forEach(d => { saisies[d.get("nom")] = d.get(cfg.champ); });
+    afficherEtat(snap.docs.filter(d => d.metadata.hasPendingWrites).length);
     construireGrille();
+  }, e => { erreur = MESSAGES_ERREUR[e.code] || "Lecture Firebase impossible : "+e.message; afficherEtat(0); });
+
+  function afficherEtat(enAttente){
+    const zone = $("etat");
+    zone.classList.toggle("erreur", !!erreur);
+    zone.textContent = erreur || (enAttente ? enAttente+" réponse"+(enAttente>1?"s":"")+" en attente d'envoi — envoi automatique dès le retour du réseau." : "");
+    zone.style.display = zone.textContent ? "block" : "none";
   }
-  document.getElementById("rpe-btnQuitterEdu").addEventListener("click", function(){ reglerModeEdu(false); });
-  document.getElementById("rpe-btnModeEdu").addEventListener("click", function(){ if(verifierCode()) reglerModeEdu(true); });
 
-  // ---------- GRILLE JOUEURS ----------
+  // ---------- Grille joueurs ----------
   function construireGrille(){
-    var grille = document.getElementById("rpe-grilleJoueurs");
+    const grille = $("grille");
     grille.innerHTML = "";
-    var nb = Object.keys(saisies).length;
-    document.getElementById("rpe-barreFill").style.width = Math.round(nb/EFFECTIF.length*100)+"%";
-    document.getElementById("rpe-progChiffre").textContent = nb+" / "+EFFECTIF.length;
+    const nb = EFFECTIF.filter(nom => nom in saisies).length;
+    $("barreFill").style.width = Math.round(nb/EFFECTIF.length*100)+"%";
+    $("progChiffre").textContent = nb+" / "+EFFECTIF.length;
 
-    EFFECTIF.forEach(function(nom){
-      var card = document.createElement("div");
+    EFFECTIF.forEach(nom => {
+      const card = document.createElement("div");
       card.className = "joueur-card";
       card.setAttribute("data-nom", nom);
-      var fait = saisies.hasOwnProperty(nom);
-      var info = "";
-      if(fait){
-        card.classList.add("fait", modeEdu ? "modifiable" : "verrouille");
-        if(modeEdu) info = '<span style="color:'+COULEURS[saisies[nom]]+'">RPE '+saisies[nom]+'</span>'; // note visible seulement pour l'éducateur
-      }
-      card.innerHTML = '<div class="j-nom">'+nom+'</div><div class="j-rpe">'+info+'</div>'+(fait ? '<div class="check">✓</div>' : '');
-      card.addEventListener("click", function(){
+      const fait = nom in saisies;
+      if(fait) card.classList.add("fait", modeEdu ? "modifiable" : "verrouille");
+      // La réponse n'est visible que pour l'éducateur
+      card.innerHTML = '<div class="j-nom">'+nom+'</div><div class="j-info">'+(fait && modeEdu ? cfg.infoCarte(saisies[nom]) : "")+'</div>'+(fait ? '<div class="check">✓</div>' : "");
+      card.addEventListener("click", () => {
         if(fait && !modeEdu) return; // verrouillé
-        ouvrirRPE(nom);
+        joueurActif = nom;
+        $("choixNom").textContent = nom;
+        afficherChoix(true);
       });
       grille.appendChild(card);
     });
   }
 
-  // ---------- CHOIX DE LA NOTE ----------
-  function afficherVue(rpe){
-    document.getElementById("rpe-vueGrille").style.display = rpe ? "none" : "block";
-    document.getElementById("rpe-vueRPE").style.display = rpe ? "block" : "none";
+  // ---------- Choix de la réponse ----------
+  function afficherChoix(oui){
+    $("vueGrille").style.display = oui ? "none" : "block";
+    $("vueChoix").style.display = oui ? "block" : "none";
   }
-  function ouvrirRPE(nom){
-    joueurActif = nom;
-    document.getElementById("rpe-rpeJoueurNom").textContent = nom;
-    afficherVue(true);
-  }
-  document.getElementById("rpe-btnRetour").addEventListener("click", function(){
-    joueurActif = null;
-    afficherVue(false);
-  });
+  $("btnRetour").addEventListener("click", () => { joueurActif = null; afficherChoix(false); });
 
-  document.querySelectorAll("#rpe-vueRPE .rpe-grand-btn").forEach(function(btn){
-    btn.addEventListener("click", function(){
+  document.querySelectorAll("#"+cfg.p+"-vueChoix [data-n]").forEach(btn => {
+    btn.addEventListener("click", () => {
       if(!joueurActif) return;
-      var n = parseInt(btn.getAttribute("data-n"),10);
-      var nom = joueurActif;
-      saisies[nom] = n;
-      ecrireStockage(STORAGE_SAISIES, saisies);
+      const n = parseInt(btn.getAttribute("data-n"), 10);
+      const nom = joueurActif;
+      const maintenant = new Date();
 
-      // Envoi immédiat
-      mettreEnFile(nom);
+      // Enregistrement immédiat (la grille et la jauge se mettent à jour via onSnapshot)
+      erreur = "";
+      setDoc(doc(col, aujourdhui+"_"+nom), { date: aujourdhui, nom: nom, [cfg.champ]: n, heure: heureHM(maintenant), at: maintenant.getTime() })
+        .catch(e => { erreur = MESSAGES_ERREUR[e.code] || "Échec de l'enregistrement : "+e.message; afficherEtat(0); });
 
-      // Flash
-      document.getElementById("rpe-flashNom").textContent = nom;
-      document.getElementById("rpe-flashNote").textContent = n;
-      document.getElementById("rpe-flashNote").style.color = COULEURS[n];
-      var flash = document.getElementById("rpe-flash");
+      cfg.remplirFlash(nom, n);
+      const flash = $("flash");
       flash.classList.add("show");
-      setTimeout(function(){
+      setTimeout(() => {
         flash.classList.remove("show");
         joueurActif = null;
-        afficherVue(false);
-        construireGrille();
+        afficherChoix(false);
       }, 600);
     });
   });
 
-  // ---------- ENVOI IMMÉDIAT (file d'attente, un envoi à la fois) ----------
-  // Google Apps Script gère mal les écritures simultanées : on envoie un par un.
-  // Un envoi raté (pas de réseau…) reste en attente et repart automatiquement.
-  var envoiEnCours = false;
-  var zoneErreur = document.getElementById("rpe-zoneErreur");
-
-  function mettreEnFile(nom){
-    if(enAttente.indexOf(nom) === -1) enAttente.push(nom);
-    ecrireStockage(STORAGE_ATTENTE, enAttente);
-    traiterFile();
+  // ---------- Mode éducateur ----------
+  function reglerModeEdu(actif){
+    modeEdu = actif;
+    if(actif) sessionStorage.setItem(sessionEdu, "1"); else sessionStorage.removeItem(sessionEdu);
+    $("modeEduBar").style.display = actif ? "flex" : "none";
+    construireGrille();
   }
+  $("btnQuitterEdu").addEventListener("click", () => reglerModeEdu(false));
+  $("btnModeEdu").addEventListener("click", () => { if(verifierCode()) reglerModeEdu(true); });
+  if(modeEdu) $("modeEduBar").style.display = "flex";
+  construireGrille(); // affichage immédiat, complété dès que Firebase répond
 
-  function traiterFile(){
-    if(envoiEnCours) return;
-    if(enAttente.length === 0){ zoneErreur.style.display = "none"; return; }
-    envoiEnCours = true;
-    var nom = enAttente[0];
-    fetch(URL_SCRIPT, {
-      method:"POST",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({type:"rpe_post", nom:nom, rpe:saisies[nom]})
-    })
-      .then(function(r){ return r.json(); })
-      .then(function(){
-        enAttente.shift();
-        ecrireStockage(STORAGE_ATTENTE, enAttente);
-        envoiEnCours = false;
-        setTimeout(traiterFile, 120);
-      })
-      .catch(function(){
-        envoiEnCours = false;
-        zoneErreur.style.display = "block";
-        zoneErreur.textContent = "Envoi en attente pour : "+enAttente.join(", ")+". Nouvel essai automatique… (toucher pour réessayer)";
-        setTimeout(traiterFile, 10000);
-      });
-  }
-  zoneErreur.addEventListener("click", traiterFile);
-  window.addEventListener("online", traiterFile);
+  // ---------- Tableau de bord (mis à jour en direct) ----------
+  const dashboard = $("dashboard");
+  const btnToggle = $("btnToggleDash");
+  let toutesLesDonnees = null;
+  let arreterEcoute = null;
+  const jourAffiche = new Date();
 
-  if(modeEdu) document.getElementById("rpe-modeEduBar").style.display = "flex";
-  construireGrille();
-  traiterFile(); // renvoie ce qui serait resté en attente
-
-  // ---------- TABLEAU DE BORD ----------
-  var dashboard = document.getElementById("rpe-dashboard");
-  var btnToggleDash = document.getElementById("rpe-btnToggleDash");
-  var toutesLesDonnees = null;
-  var jourAffiche = new Date();
-
-  btnToggleDash.addEventListener("click", function(){
+  btnToggle.addEventListener("click", () => {
     if(dashboard.classList.contains("show")){
       dashboard.classList.remove("show");
-      btnToggleDash.textContent = "Voir le tableau de bord coach";
+      btnToggle.textContent = "Voir le tableau de bord coach";
+      if(arreterEcoute){ arreterEcoute(); arreterEcoute = null; }
       return;
     }
     if(!verifierCode()) return;
     dashboard.classList.add("show");
-    btnToggleDash.textContent = "Masquer le tableau de bord";
-    chargerDonnees();
+    btnToggle.textContent = "Masquer le tableau de bord";
+    arreterEcoute = onSnapshot(col, snap => {
+      toutesLesDonnees = snap.docs.map(d => d.data());
+      afficherJour();
+      if(cfg.surDonnees) cfg.surDonnees(toutesLesDonnees);
+    }, () => { $("dashContenu").innerHTML = '<div class="dash-empty">Impossible de charger.</div>'; });
   });
 
-  document.getElementById("rpe-btnRafraichir").addEventListener("click", chargerDonnees);
-  document.getElementById("rpe-jourPrecedent").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()-1); afficherJour(); });
-  document.getElementById("rpe-jourSuivant").addEventListener("click", function(){ jourAffiche.setDate(jourAffiche.getDate()+1); afficherJour(); });
-
-  function chargerDonnees(){
-    document.getElementById("rpe-dashContenu").innerHTML = '<div class="dash-loading">Chargement…</div>';
-    fetch(URL_SCRIPT+"?type=rpe_post")
-      .then(function(r){ return r.json(); })
-      .then(function(d){ toutesLesDonnees=d; afficherJour(); })
-      .catch(function(){ document.getElementById("rpe-dashContenu").innerHTML='<div class="dash-empty">Impossible de charger.</div>'; });
-  }
+  $("jourPrecedent").addEventListener("click", () => { jourAffiche.setDate(jourAffiche.getDate()-1); afficherJour(); });
+  $("jourSuivant").addEventListener("click", () => { jourAffiche.setDate(jourAffiche.getDate()+1); afficherJour(); });
 
   function afficherJour(){
     if(!toutesLesDonnees) return;
-    var clef = clefISO(jourAffiche);
-    document.getElementById("rpe-jourActuelTxt").textContent = clef===clefISO(new Date()) ? "aujourd'hui" : formatDate(jourAffiche);
-    var data = toutesLesDonnees.filter(function(r){ return normaliserDate(r.date) === clef; });
-    document.getElementById("rpe-dashCount").textContent = data.length+(data.length===1?" réponse":" réponses");
+    const clef = clefISO(jourAffiche);
+    $("jourActuel").textContent = clef === aujourdhui ? "aujourd'hui" : formatDate(jourAffiche);
+    const data = toutesLesDonnees.filter(r => r.date === clef);
+    $("dashCount").textContent = data.length+(data.length === 1 ? " réponse" : " réponses");
+    const cont = $("dashContenu");
+    if(data.length === 0){ cont.innerHTML = '<div class="dash-empty">'+cfg.videJour+'</div>'; return; }
+    cont.innerHTML = cfg.rendreJour(data);
+  }
 
-    var cont = document.getElementById("rpe-dashContenu");
-    if(data.length===0){ cont.innerHTML='<div class="dash-empty">Aucune note ce jour-là.</div>'; return; }
+  // ---------- Import unique de l'ancien Google Sheet ----------
+  // À utiliser une seule fois par onglet ; ce bouton (et urlAncienne) pourra ensuite être supprimé.
+  $("btnImport").addEventListener("click", () => {
+    if(!toutesLesDonnees || !confirm("Copier dans Firebase les réponses enregistrées dans l'ancien Google Sheet ?")) return;
+    const btn = $("btnImport");
+    btn.disabled = true; btn.textContent = "Import en cours…";
+    const deja = new Set(toutesLesDonnees.map(r => r.date+"_"+r.nom));
+    fetch(cfg.urlAncienne)
+      .then(r => r.json())
+      .then(lignes => {
+        const docs = {}; // le dernier envoi d'un joueur pour une date l'emporte (corrections)
+        lignes.forEach(r => {
+          const date = dateSheet(r.date), n = parseInt(r[cfg.champ], 10);
+          if(!date || !r.nom || !n || deja.has(date+"_"+r.nom)) return;
+          docs[date+"_"+r.nom] = { date: date, nom: String(r.nom), [cfg.champ]: n, heure: heureSheet(r.heure), at: Date.parse(date+"T12:00:00") };
+        });
+        const ids = Object.keys(docs);
+        const lots = [];
+        for(let i = 0; i < ids.length; i += 400){
+          const batch = writeBatch(db);
+          ids.slice(i, i+400).forEach(id => batch.set(doc(col, id), docs[id]));
+          lots.push(batch.commit());
+        }
+        return Promise.all(lots).then(() => ids.length);
+      })
+      .then(n => { btn.textContent = n+" réponse"+(n>1?"s":"")+" importée"+(n>1?"s":""); })
+      .catch(e => { btn.disabled = false; btn.textContent = "Échec de l'import — réessayer"; console.error(e); });
+  });
+}
 
-    var somme = 0;
-    data.forEach(function(r){ somme += parseInt(r.rpe,10); });
-    var cMoy = COULEURS[Math.round(somme/data.length)];
-    data.sort(function(a,b){ return parseInt(b.rpe,10)-parseInt(a.rpe,10); });
+// Formats renvoyés par l'ancien Apps Script (utilisés seulement par l'import)
+function dateSheet(d){
+  if(typeof d !== "string") return "";
+  if(d.length > 10){ const t = new Date(d); return isNaN(t.getTime()) ? d.substring(0,10) : clefISO(t); }
+  return d;
+}
+function heureSheet(h){
+  if(!h) return "";
+  const d = new Date(h);
+  return isNaN(d.getTime()) ? String(h) : heureHM(d);
+}
 
-    var html = '<div class="moyenne-zone"><span class="label">RPE moyen équipe</span><span class="chiffre" style="color:'+cMoy+'">'+(somme/data.length).toFixed(1)+' / 10</span></div>';
-    data.forEach(function(r){
-      var c = COULEURS[parseInt(r.rpe,10)] || "#9aa0ad";
+/* ============ ONGLET 1 : MÉTÉO DU JOUR ============ */
+const NIVEAUX = {
+  1:{emoji:"🟩", titre:"Pleine forme !",   couleur:"var(--n1)"},
+  2:{emoji:"🟨", titre:"Un peu lourd",     couleur:"var(--n2)"},
+  3:{emoji:"🟧", titre:"Fatigué",          couleur:"var(--n3)"},
+  4:{emoji:"🟥", titre:"Très fatigué",     couleur:"var(--n4)"},
+  5:{emoji:"⬛", titre:"Épuisé / Douleur", couleur:"var(--n5)"}
+};
+const selHisto = document.getElementById("met-selectHisto");
+let donneesMeteo = null;
+
+creerSuivi({
+  p: "met",
+  collection: "u13_meteo",
+  champ: "niveau",
+  urlAncienne: "https://script.google.com/macros/s/AKfycbw9ychbh5oSoc-k22FnT7mmCf04684C2hJmllRDATvNQR37I_Udwpn3mHTAVvA3af9cRQ/exec",
+  videJour: "Aucun check-in ce jour-là.",
+  infoCarte: n => NIVEAUX[n] ? NIVEAUX[n].emoji : "",
+  remplirFlash: (nom, n) => {
+    document.getElementById("met-flashEmoji").textContent = NIVEAUX[n].emoji;
+    document.getElementById("met-flashNom").textContent = nom;
+  },
+  rendreJour: data => {
+    let html = "";
+    [1,2,3,4,5].forEach(n => {
+      const groupe = data.filter(r => r.niveau === n).sort((a,b) => a.at - b.at);
+      if(groupe.length === 0) return;
+      const info = NIVEAUX[n];
+      html += '<div class="groupe"><div class="groupe-titre"><span class="dot" style="background:'+info.couleur+'"></span>'+info.titre+' ('+groupe.length+')</div>';
+      groupe.forEach(r => {
+        html += '<div class="joueur-ligne"><span class="em">'+info.emoji+'</span><span class="nom">'+escapeHTML(r.nom)+'</span><span class="heure">'+escapeHTML(r.heure || "")+'</span></div>';
+      });
+      html += '</div>';
+    });
+    return html;
+  },
+  surDonnees: data => { donneesMeteo = data; afficherHistorique(selHisto.value); }
+});
+
+// Onglets « Vue du jour » / « Historique joueur »
+document.querySelectorAll("#met-dashboard .dash-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll("#met-dashboard .dash-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    const onglet = tab.getAttribute("data-onglet");
+    document.getElementById("met-vueJour").style.display = onglet === "jour" ? "block" : "none";
+    document.getElementById("met-vueHistorique").style.display = onglet === "historique" ? "block" : "none";
+  });
+});
+
+EFFECTIF.forEach(nom => { const o = document.createElement("option"); o.value = nom; o.textContent = nom; selHisto.appendChild(o); });
+selHisto.addEventListener("change", () => afficherHistorique(selHisto.value));
+
+function afficherHistorique(nom){
+  const cont = document.getElementById("met-histoContenu");
+  if(!nom){ cont.innerHTML = ""; return; }
+  if(!donneesMeteo){ cont.innerHTML = '<div class="dash-loading">Chargement…</div>'; return; }
+  const lignes = donneesMeteo.filter(r => r.nom === nom && NIVEAUX[r.niveau]).sort((a,b) => a.date < b.date ? 1 : -1);
+  if(lignes.length === 0){ cont.innerHTML = '<div class="dash-empty">Aucune donnée pour ce joueur.</div>'; return; }
+  const moyenne = lignes.reduce((s,r) => s + r.niveau, 0) / lignes.length;
+  let html = '<div class="moyenne-card"><div class="chiffre">'+moyenne.toFixed(1)+' / 5</div><div class="label">Niveau moyen de fatigue sur '+lignes.length+' check-ins</div></div>';
+  lignes.forEach(r => {
+    html += '<div class="histo-ligne"><span class="em">'+NIVEAUX[r.niveau].emoji+'</span><span class="d">'+formatDate(new Date(r.date+"T12:00:00"))+'</span></div>';
+  });
+  cont.innerHTML = html;
+}
+
+/* ============ ONGLET 2 : RPE POST-SÉANCE ============ */
+const COULEURS = {1:"#3a9d5a",2:"#5aad6a",3:"#8fc43a",4:"#c4c43a",5:"#d4a82e",6:"#d4841f",7:"#d4611f",8:"#c4391f",9:"#b42515",10:"#8a1010"};
+
+creerSuivi({
+  p: "rpe",
+  collection: "u13_rpe",
+  champ: "rpe",
+  urlAncienne: "https://script.google.com/macros/s/AKfycbxpcsBjwqNDR7LkbT53krZK2d29iQlDzpOUovqD2FCnEGHjENNWE6orj6upb7PtHrLo/exec?type=rpe_post",
+  videJour: "Aucune note ce jour-là.",
+  infoCarte: n => '<span style="font-size:11px;color:'+COULEURS[n]+'">RPE '+n+'</span>',
+  remplirFlash: (nom, n) => {
+    document.getElementById("rpe-flashNom").textContent = nom;
+    const note = document.getElementById("rpe-flashNote");
+    note.textContent = n;
+    note.style.color = COULEURS[n];
+  },
+  rendreJour: data => {
+    const moyenne = data.reduce((s,r) => s + r.rpe, 0) / data.length;
+    let html = '<div class="moyenne-zone"><span class="label">RPE moyen équipe</span><span class="chiffre" style="color:'+COULEURS[Math.round(moyenne)]+'">'+moyenne.toFixed(1)+' / 10</span></div>';
+    data.slice().sort((a,b) => b.rpe - a.rpe).forEach(r => {
+      const c = COULEURS[r.rpe] || "#9aa0ad";
       html += '<div class="rpe-ligne">'
             +   '<div class="badge" style="background:'+c+'22;color:'+c+';border:1.5px solid '+c+'">'+r.rpe+'</div>'
             +   '<span class="nom">'+escapeHTML(r.nom)+'</span>'
-            +   '<span class="heure">'+formatHeure(r.heure)+'</span>'
+            +   '<span class="heure">'+escapeHTML(r.heure || "")+'</span>'
             + '</div>';
     });
-    cont.innerHTML = html;
+    return html;
   }
+});
 
-})();
-</script>
-</div>
-
-<!-- ===================================================== -->
-<!-- BASCULE ENTRE LES ONGLETS                             -->
-<!-- ===================================================== -->
-<script>
-(function(){
-  var boutons = document.querySelectorAll(".app-tab");
-  boutons.forEach(function(btn){
-    btn.addEventListener("click", function(){
-      boutons.forEach(function(b){ b.classList.remove("active"); });
-      document.querySelectorAll(".app-panel").forEach(function(p){ p.classList.remove("active"); });
-      btn.classList.add("active");
-      document.getElementById(btn.getAttribute("data-cible")).classList.add("active");
-    });
+/* ============ Bascule entre les onglets ============ */
+const boutonsOnglets = document.querySelectorAll(".app-tab");
+boutonsOnglets.forEach(btn => {
+  btn.addEventListener("click", () => {
+    boutonsOnglets.forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".app-panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.getAttribute("data-cible")).classList.add("active");
   });
-})();
+});
 </script>
 
 </body>
