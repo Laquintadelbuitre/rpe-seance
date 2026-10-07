@@ -304,7 +304,7 @@
     </div>
     <div class="dash-actions">
       <button id="met-btnModeEdu">Mode éducateur</button>
-      <button id="met-btnImport">Importer l'historique Google Sheet</button>
+      <button id="met-btnImport">Récupérer l'historique (Sheet + ce téléphone)</button>
     </div>
   </div>
 
@@ -384,7 +384,7 @@
     <div id="rpe-dashContenu"><div class="dash-loading">Chargement…</div></div>
     <div class="dash-actions">
       <button id="rpe-btnModeEdu">Mode éducateur</button>
-      <button id="rpe-btnImport">Importer l'historique Google Sheet</button>
+      <button id="rpe-btnImport">Récupérer l'historique (Sheet + ce téléphone)</button>
     </div>
   </div>
 
@@ -435,6 +435,13 @@ function verifierCode(){
   sessionStorage.setItem(SESSION_COACH, "1");
   return true;
 }
+
+// Un téléphone qui garde la page ouverte d'un jour à l'autre la recharge
+// au changement de jour, pour suivre les réponses du bon jour.
+const jourChargement = clefISO(new Date());
+function verifierJour(){ if(clefISO(new Date()) !== jourChargement) location.reload(); }
+document.addEventListener("visibilitychange", () => { if(!document.hidden) verifierJour(); });
+setInterval(verifierJour, 60000);
 
 const MESSAGES_ERREUR = {
   "permission-denied": "Firebase refuse l'enregistrement : vérifiez les règles de sécurité Firestore.",
@@ -579,18 +586,36 @@ function creerSuivi(cfg){
     }, () => { $("dashContenu").innerHTML = '<div class="dash-empty">Impossible de charger.</div>'; });
   }
 
-  // ---------- Import unique de l'ancien Google Sheet ----------
-  // À utiliser une seule fois par onglet ; ce bouton (et urlAncienne) pourra ensuite être supprimé.
+  // ---------- Récupération de l'historique de l'ancienne version ----------
+  // 1) les lignes de l'ancien Google Sheet ;
+  // 2) les réponses gardées dans la mémoire de CE téléphone par l'ancienne version
+  //    (y compris celles dont l'envoi au Sheet avait échoué sans prévenir).
+  // À faire sur chaque téléphone utilisé avant le passage à Firebase ; sans risque si on le refait :
+  // les réponses déjà dans Firebase ne sont jamais écrasées.
   $("btnImport").addEventListener("click", () => {
-    if(!confirm("Copier dans Firebase les réponses enregistrées dans l'ancien Google Sheet ?")) return;
+    if(!confirm("Copier dans Firebase les anciennes réponses (Google Sheet + mémoire de ce téléphone) ?")) return;
     const btn = $("btnImport");
-    btn.disabled = true; btn.textContent = "Import en cours…";
+    btn.disabled = true; btn.textContent = "Récupération en cours…";
     let deja;
     getDocs(col) // lecture complète, une seule fois, pour ne pas écraser les réponses déjà dans Firebase
       .then(snap => { deja = new Set(snap.docs.map(d => d.id)); return fetch(cfg.urlAncienne); })
       .then(r => r.json())
+      .catch(() => []) // Sheet injoignable (script archivé…) : on récupère quand même la mémoire du téléphone
       .then(lignes => {
         const docs = {}; // le dernier envoi d'un joueur pour une date l'emporte (corrections)
+        // Mémoire du téléphone : clés « <prefixeLocal>AAAA-MM-JJ » = {prénom: note}
+        Object.keys(localStorage).forEach(k => {
+          if(k.indexOf(cfg.prefixeLocal) !== 0) return;
+          const date = k.slice(cfg.prefixeLocal.length);
+          let saisiesJour = {};
+          try{ saisiesJour = JSON.parse(localStorage.getItem(k)) || {}; }catch(e){}
+          Object.keys(saisiesJour).forEach(nom => {
+            const n = parseInt(saisiesJour[nom], 10);
+            if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || !n || deja.has(date+"_"+nom)) return;
+            docs[date+"_"+nom] = { date: date, nom: nom, [cfg.champ]: n, heure: "", at: Date.parse(date+"T12:00:00"), maj: serverTimestamp() };
+          });
+        });
+        // Lignes du Sheet (prioritaires : elles ont l'heure)
         lignes.forEach(r => {
           const date = dateSheet(r.date), n = parseInt(r[cfg.champ], 10);
           if(!date || !r.nom || !n || deja.has(date+"_"+r.nom)) return;
@@ -605,8 +630,8 @@ function creerSuivi(cfg){
         }
         return Promise.all(lots).then(() => ids.length);
       })
-      .then(n => { btn.textContent = n+" réponse"+(n>1?"s":"")+" importée"+(n>1?"s":""); })
-      .catch(e => { btn.disabled = false; btn.textContent = "Échec de l'import — réessayer"; console.error(e); });
+      .then(n => { btn.textContent = n ? n+" réponse"+(n>1?"s":"")+" récupérée"+(n>1?"s":"") : "Rien à récupérer"; })
+      .catch(e => { btn.disabled = false; btn.textContent = "Échec — réessayer"; console.error(e); });
   });
 
   return col;
@@ -637,6 +662,7 @@ const colMeteo = creerSuivi({
   p: "met",
   collection: "u13_meteo",
   champ: "niveau",
+  prefixeLocal: "meteo_saisies_",
   urlAncienne: "https://script.google.com/macros/s/AKfycbw9ychbh5oSoc-k22FnT7mmCf04684C2hJmllRDATvNQR37I_Udwpn3mHTAVvA3af9cRQ/exec",
   videJour: "Aucun check-in ce jour-là.",
   infoCarte: n => NIVEAUX[n] ? NIVEAUX[n].emoji : "",
@@ -700,6 +726,7 @@ creerSuivi({
   p: "rpe",
   collection: "u13_rpe",
   champ: "rpe",
+  prefixeLocal: "rpe_post_saisies_",
   urlAncienne: "https://script.google.com/macros/s/AKfycbxpcsBjwqNDR7LkbT53krZK2d29iQlDzpOUovqD2FCnEGHjENNWE6orj6upb7PtHrLo/exec?type=rpe_post",
   videJour: "Aucune note ce jour-là.",
   infoCarte: n => '<span style="font-size:11px;color:'+COULEURS[n]+'">RPE '+n+'</span>',
