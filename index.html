@@ -304,7 +304,8 @@
     </div>
     <div class="dash-actions">
       <button id="met-btnModeEdu">Mode éducateur</button>
-      <button id="met-btnImport">Récupérer l'historique (Sheet + ce téléphone)</button>
+      <button id="met-btnImport">Importer l'historique Google Sheet</button>
+      <button id="met-btnExport">📊 Exporter présences (Excel)</button>
     </div>
   </div>
 
@@ -384,7 +385,7 @@
     <div id="rpe-dashContenu"><div class="dash-loading">Chargement…</div></div>
     <div class="dash-actions">
       <button id="rpe-btnModeEdu">Mode éducateur</button>
-      <button id="rpe-btnImport">Récupérer l'historique (Sheet + ce téléphone)</button>
+      <button id="rpe-btnImport">Importer l'historique Google Sheet</button>
     </div>
   </div>
 
@@ -396,6 +397,7 @@
 </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, getDocs, writeBatch, onSnapshot, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -586,36 +588,18 @@ function creerSuivi(cfg){
     }, () => { $("dashContenu").innerHTML = '<div class="dash-empty">Impossible de charger.</div>'; });
   }
 
-  // ---------- Récupération de l'historique de l'ancienne version ----------
-  // 1) les lignes de l'ancien Google Sheet ;
-  // 2) les réponses gardées dans la mémoire de CE téléphone par l'ancienne version
-  //    (y compris celles dont l'envoi au Sheet avait échoué sans prévenir).
-  // À faire sur chaque téléphone utilisé avant le passage à Firebase ; sans risque si on le refait :
-  // les réponses déjà dans Firebase ne sont jamais écrasées.
+  // ---------- Import unique de l'ancien Google Sheet ----------
+  // À utiliser une seule fois par onglet ; ce bouton (et urlAncienne) pourra ensuite être supprimé.
   $("btnImport").addEventListener("click", () => {
-    if(!confirm("Copier dans Firebase les anciennes réponses (Google Sheet + mémoire de ce téléphone) ?")) return;
+    if(!confirm("Copier dans Firebase les réponses enregistrées dans l'ancien Google Sheet ?")) return;
     const btn = $("btnImport");
-    btn.disabled = true; btn.textContent = "Récupération en cours…";
+    btn.disabled = true; btn.textContent = "Import en cours…";
     let deja;
     getDocs(col) // lecture complète, une seule fois, pour ne pas écraser les réponses déjà dans Firebase
       .then(snap => { deja = new Set(snap.docs.map(d => d.id)); return fetch(cfg.urlAncienne); })
       .then(r => r.json())
-      .catch(() => []) // Sheet injoignable (script archivé…) : on récupère quand même la mémoire du téléphone
       .then(lignes => {
         const docs = {}; // le dernier envoi d'un joueur pour une date l'emporte (corrections)
-        // Mémoire du téléphone : clés « <prefixeLocal>AAAA-MM-JJ » = {prénom: note}
-        Object.keys(localStorage).forEach(k => {
-          if(k.indexOf(cfg.prefixeLocal) !== 0) return;
-          const date = k.slice(cfg.prefixeLocal.length);
-          let saisiesJour = {};
-          try{ saisiesJour = JSON.parse(localStorage.getItem(k)) || {}; }catch(e){}
-          Object.keys(saisiesJour).forEach(nom => {
-            const n = parseInt(saisiesJour[nom], 10);
-            if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || !n || deja.has(date+"_"+nom)) return;
-            docs[date+"_"+nom] = { date: date, nom: nom, [cfg.champ]: n, heure: "", at: Date.parse(date+"T12:00:00"), maj: serverTimestamp() };
-          });
-        });
-        // Lignes du Sheet (prioritaires : elles ont l'heure)
         lignes.forEach(r => {
           const date = dateSheet(r.date), n = parseInt(r[cfg.champ], 10);
           if(!date || !r.nom || !n || deja.has(date+"_"+r.nom)) return;
@@ -630,8 +614,8 @@ function creerSuivi(cfg){
         }
         return Promise.all(lots).then(() => ids.length);
       })
-      .then(n => { btn.textContent = n ? n+" réponse"+(n>1?"s":"")+" récupérée"+(n>1?"s":"") : "Rien à récupérer"; })
-      .catch(e => { btn.disabled = false; btn.textContent = "Échec — réessayer"; console.error(e); });
+      .then(n => { btn.textContent = n+" réponse"+(n>1?"s":"")+" importée"+(n>1?"s":""); })
+      .catch(e => { btn.disabled = false; btn.textContent = "Échec de l'import — réessayer"; console.error(e); });
   });
 
   return col;
@@ -649,6 +633,77 @@ function heureSheet(h){
   return isNaN(d.getTime()) ? String(h) : heureHM(d);
 }
 
+/* ============ EXPORT PRÉSENCES (Excel, une seule feuille) ============
+   Règle : séance lundi, jeudi, vendredi à 18:40.
+   - Pré    : réponse météo ET post-séance, météo envoyée à 18:40 ou avant
+   - Ret    : réponse météo ET post-séance, mais météo envoyée après 18:40
+   - ABS    : une des deux réponses manque
+   - vide   : aucune réponse ce jour-là, joueur absent de l'application, ou jour futur */
+const JOURS_SEANCE = [1, 4, 5];
+const HEURE_DEBUT_SEANCE = "18:40";
+const JOURS_COURTS = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
+const PRESENCES_JOUEURS = [
+  ["ISSAK ADAM","Hadi"], ["POGOR","Sebastien"], ["FAUCHER SORO","Mickaël"], ["DIABY","Bakoutoubo"],
+  ["FUNCK CLUZEL","Sacha"], ["MADANY","Keys"], ["SYLLA","Nourou"], ["HAMOUL","Yanis"],
+  ["MORAND MASON","Mathis"], ["BOMPEIX","Ethan"], ["SYLLA","Abdoul Karim"], ["TAIBAOUI","Jalil"],
+  ["SIMOES","Gabin"], ["MAYCHAL","Adam"], ["SYLLA","Kalifa"], ["TAYEB BEY","Bilel"],
+  ["STEIMLE PEREZ","Pablo"], ["BALTALI","Melih"], ["SEBAI","Issam"], ["IGNATOV","Emir"],
+  ["FRETILLE","Loan"], ["VERGER","Sarah"], ["TEDJANI","Selyan"], ["","El Amine"], ["","Mohamed"]
+];
+
+function libelleJour(iso){
+  const [a, m, j] = iso.split("-").map(Number);
+  return JOURS_COURTS[new Date(a, m-1, j).getDay()] + " " + String(j).padStart(2,"0") + "/" + String(m).padStart(2,"0");
+}
+
+function codePresence(iso, prenom, pre, post){
+  if(!EFFECTIF.includes(prenom)) return "";                 // joueur pas dans l'application
+  if(!(iso in pre) && !(iso in post)) return "";            // aucune donnée ce jour-là
+  const avant = pre[iso] !== undefined && prenom in pre[iso];
+  const apres = post[iso] !== undefined && post[iso].has(prenom);
+  if(!avant || !apres) return "ABS";
+  return pre[iso][prenom] > HEURE_DEBUT_SEANCE ? "Ret" : "Pré";
+}
+
+function exporterPresences(){
+  if(!verifierCode()) return;
+  const btn = document.getElementById("met-btnExport");
+  btn.disabled = true; btn.textContent = "Préparation…";
+  const remettre = () => { btn.disabled = false; btn.textContent = "📊 Exporter présences (Excel)"; };
+
+  Promise.all([getDocs(collection(db, "u13_meteo")), getDocs(collection(db, "u13_rpe"))])
+    .then(([meteo, rpe]) => {
+      const pre = {};   // pre[date][prénom] = heure de la météo
+      const post = {};  // post[date] = Set des prénoms ayant répondu au RPE
+      meteo.docs.forEach(d => { const x = d.data(); (pre[x.date] = pre[x.date] || {})[x.nom] = x.heure || ""; });
+      rpe.docs.forEach(d => { const x = d.data(); (post[x.date] = post[x.date] || new Set()).add(x.nom); });
+
+      const datesAvecDonnees = [...new Set([...Object.keys(pre), ...Object.keys(post)])].sort();
+      if(datesAvecDonnees.length === 0){ alert("Aucune réponse enregistrée pour le moment."); return; }
+
+      // Colonnes : lundis, jeudis, vendredis, de la première réponse jusqu'à aujourd'hui
+      const aujourdhui = clefISO(new Date());
+      const [a, m, j] = datesAvecDonnees[0].split("-").map(Number);
+      const colonnes = [];
+      for(let d = new Date(a, m-1, j); clefISO(d) <= aujourdhui; d.setDate(d.getDate()+1)){
+        if(JOURS_SEANCE.includes(d.getDay())) colonnes.push(clefISO(d));
+      }
+
+      const entetes = ["Nom", "Prénom"].concat(colonnes.map(libelleJour));
+      const lignes = PRESENCES_JOUEURS.map(([nom, prenom]) =>
+        [nom, prenom].concat(colonnes.map(iso => codePresence(iso, prenom, pre, post))));
+
+      const ws = XLSX.utils.aoa_to_sheet([entetes].concat(lignes));
+      ws["!cols"] = [{wch:16}, {wch:14}].concat(colonnes.map(() => ({wch:10})));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Présences");
+      XLSX.writeFile(wb, "Présences U13 " + aujourdhui + ".xlsx");
+    })
+    .catch(e => { alert("Export impossible : " + (e && e.message ? e.message : e)); console.error(e); })
+    .finally(remettre);
+}
+document.getElementById("met-btnExport").addEventListener("click", exporterPresences);
+
 /* ============ ONGLET 1 : MÉTÉO DU JOUR ============ */
 const NIVEAUX = {
   1:{emoji:"🟩", titre:"Pleine forme !",   couleur:"var(--n1)"},
@@ -662,7 +717,6 @@ const colMeteo = creerSuivi({
   p: "met",
   collection: "u13_meteo",
   champ: "niveau",
-  prefixeLocal: "meteo_saisies_",
   urlAncienne: "https://script.google.com/macros/s/AKfycbw9ychbh5oSoc-k22FnT7mmCf04684C2hJmllRDATvNQR37I_Udwpn3mHTAVvA3af9cRQ/exec",
   videJour: "Aucun check-in ce jour-là.",
   infoCarte: n => NIVEAUX[n] ? NIVEAUX[n].emoji : "",
@@ -726,7 +780,6 @@ creerSuivi({
   p: "rpe",
   collection: "u13_rpe",
   champ: "rpe",
-  prefixeLocal: "rpe_post_saisies_",
   urlAncienne: "https://script.google.com/macros/s/AKfycbxpcsBjwqNDR7LkbT53krZK2d29iQlDzpOUovqD2FCnEGHjENNWE6orj6upb7PtHrLo/exec?type=rpe_post",
   videJour: "Aucune note ce jour-là.",
   infoCarte: n => '<span style="font-size:11px;color:'+COULEURS[n]+'">RPE '+n+'</span>',
