@@ -635,9 +635,9 @@ function heureSheet(h){
 
 /* ============ EXPORT PRÉSENCES (Excel, une seule feuille) ============
    Règle : séance lundi, jeudi, vendredi à 18:40.
-   - Pré    : réponse météo ET post-séance, météo envoyée à 18:40 ou avant
-   - Ret    : réponse météo ET post-séance, mais météo envoyée après 18:40
-   - ABS    : une des deux réponses manque
+   - Pré    : au moins une réponse (météo ou post-séance), météo envoyée à 18:40 ou avant
+   - Ret    : météo envoyée après 18:40
+   - ABS    : les deux réponses manquent
    - vide   : aucune réponse ce jour-là, joueur absent de l'application, ou jour futur */
 const JOURS_SEANCE = [1, 4, 5];
 const HEURE_DEBUT_SEANCE = "18:40";
@@ -661,8 +661,9 @@ function codePresence(iso, prenom, pre, post){
   if(!(iso in pre) && !(iso in post)) return "";            // aucune donnée ce jour-là
   const avant = pre[iso] !== undefined && prenom in pre[iso];
   const apres = post[iso] !== undefined && post[iso].has(prenom);
-  if(!avant || !apres) return "ABS";
-  return pre[iso][prenom] > HEURE_DEBUT_SEANCE ? "Ret" : "Pré";
+  if(!avant && !apres) return "ABS";                        // absent : les 2 réponses manquent
+  if(avant && pre[iso][prenom] > HEURE_DEBUT_SEANCE) return "Ret";
+  return "Pré";
 }
 
 function exporterPresences(){
